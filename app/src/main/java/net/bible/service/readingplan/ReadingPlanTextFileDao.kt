@@ -97,7 +97,7 @@ class ReadingPlanTextFileDao {
         }
 
     fun userPlanCodes(filterDuplicates: Boolean = true): List<String>? {
-            val userPlans = INTERNAL_READING_PLAN_FOLDER.list()
+            val userPlans = USER_READING_PLAN_FOLDER.list()
             return if (userPlans != null) {
                 if (filterDuplicates) {
                     getReadingPlanCodes(userPlans).filter { userPlan ->
@@ -306,15 +306,13 @@ class ReadingPlanTextFileDao {
     }
 
     companion object {
-
-        private val USER_READING_PLAN_FOLDER = SharedConstants.MANUAL_READINGPLAN_DIR
-        private val INTERNAL_READING_PLAN_FOLDER = SharedConstants.INTERNAL_READINGPLAN_DIR
+        private val USER_READING_PLAN_FOLDER = SharedConstants.INTERNAL_READINGPLAN_DIR
         private const val READING_PLAN_FOLDER = SharedConstants.READINGPLAN_DIR_NAME
         private const val DOT_PROPERTIES = ".properties"
         private const val VERSIFICATION = "Versification"
         private const val DEFAULT_VERSIFICATION = SystemKJV.V11N_NAME
         private const val INCLUSIVE_VERSIFICATION = SystemNRSVA.V11N_NAME
 
-        private const val TAG = "ReadingPlanDao"
+        private const val TAG = "ReadingPlanTextDao"
     }
 }

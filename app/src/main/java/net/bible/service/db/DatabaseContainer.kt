@@ -17,14 +17,18 @@
  */
 package net.bible.service.db
 
+import android.util.Log
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import net.bible.android.BibleApplication
+import net.bible.android.SharedConstants
 import net.bible.android.database.AppDatabase
+import net.bible.service.common.CommonUtils
 import net.bible.service.db.bookmark.BookmarkDatabaseDefinition
 import net.bible.service.db.mynote.MyNoteDatabaseDefinition
 import net.bible.service.db.readingplan.ReadingPlanDatabaseOperations
+import java.io.File
 import java.sql.SQLException
 
 
@@ -506,6 +510,30 @@ private val MIGRATION_29_30 = object : Migration(29, 30) {
     }
 }
 
+/** Reading plan file migration to internal storage */
+private val MIGRATION_30_31 = object : Migration(30, 31) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        val oldReadingPlanDir = File(SharedConstants.MANUAL_INSTALL_DIR, SharedConstants.READINGPLAN_DIR_NAME)
+        val sdPlans = oldReadingPlanDir.list()
+        if (sdPlans == null || sdPlans.isEmpty()) return
+
+        val dotProperties = ".properties"
+        val defaultInternalPlans = CommonUtils.resources.assets.list(SharedConstants.READINGPLAN_DIR_NAME)!!.filter { p -> p.endsWith(dotProperties) }
+
+        for (file in sdPlans.filter { p -> p.endsWith(dotProperties) }) {
+            val userReadingPlanFile = File(oldReadingPlanDir, file)
+            val copyToFile = File(SharedConstants.INTERNAL_READINGPLAN_DIR, file)
+
+            if (userReadingPlanFile.exists() && !defaultInternalPlans.contains(file)) {
+                Log.i("MIGRATION_30_31", "Migrating plan $file to internal reading plan storage")
+                userReadingPlanFile.copyTo(copyToFile)
+            } else {
+                Log.i("MIGRATION_30_31", "Migrating plans but file $file was not migrated")
+            }
+        }
+    }
+}
+
 object DatabaseContainer {
     private var instance: AppDatabase? = null
 
@@ -547,7 +575,8 @@ object DatabaseContainer {
                         SQUASH_MIGRATION_10_27,
                         MIGRATION_27_28,
                         MIGRATION_28_29,
-                        MIGRATION_29_30
+                        MIGRATION_29_30,
+                        MIGRATION_30_31
                         // When adding new migrations, remember to increment DATABASE_VERSION too
                     )
                     .build()

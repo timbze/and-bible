@@ -45,7 +45,6 @@ object SharedConstants {
     val FONT_DIR = File(MODULE_DIR, FONT_SUBDIR_NAME)
     val MANUAL_FONT_DIR = File(MANUAL_INSTALL_DIR, FONT_SUBDIR_NAME)
     const val READINGPLAN_DIR_NAME = "readingplan"
-    val MANUAL_READINGPLAN_DIR = File(MANUAL_INSTALL_DIR, READINGPLAN_DIR_NAME)
     val INTERNAL_READINGPLAN_DIR = File(internalDir, READINGPLAN_DIR_NAME)
     const val DEFAULT_STYLESHEET = "style.css"
     const val NIGHT_MODE_STYLESHEET = "night_mode.css"
