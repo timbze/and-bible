@@ -46,6 +46,7 @@ object SharedConstants {
     val MANUAL_FONT_DIR = File(MANUAL_INSTALL_DIR, FONT_SUBDIR_NAME)
     const val READINGPLAN_DIR_NAME = "readingplan"
     val MANUAL_READINGPLAN_DIR = File(MANUAL_INSTALL_DIR, READINGPLAN_DIR_NAME)
+    val INTERNAL_READINGPLAN_DIR = File(internalDir, READINGPLAN_DIR_NAME)
     const val DEFAULT_STYLESHEET = "style.css"
     const val NIGHT_MODE_STYLESHEET = "night_mode.css"
     val MANUAL_CSS_DIR = File(MANUAL_INSTALL_DIR, CSS_SUBDIR_NAME)
@@ -55,6 +56,9 @@ object SharedConstants {
 
     private val moduleDir: File
         get() = application.getExternalFilesDir(null)!!
+
+    private val internalDir: File
+        get() = application.filesDir
 
     private val manualInstallDir: File
         get() {
