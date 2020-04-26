@@ -310,6 +310,7 @@
     <string name="msg_set_current_day_reading_plan">This will set today as the current day in this plan and mark all previous days as read. Continue?</string>
     <string name="import_reading_plan">Import reading plan…</string>
     <string name="reset">Reset…</string>
+    <string name="done">Done</string>
     <string name="reset_plan_question">Are you sure you want to reset this plan?</string>
     <string name="plan_duplicate_user_plan">
         There is a user reading plan in sdcard
