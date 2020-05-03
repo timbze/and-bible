@@ -41,6 +41,7 @@ import org.crosswire.common.util.Language
 import org.crosswire.jsword.bridge.BookIndexer
 import org.crosswire.jsword.internationalisation.LocaleProvider
 import org.crosswire.jsword.internationalisation.LocaleProviderManager
+import java.io.File
 import java.util.Locale
 
 class MyLocaleProvider: LocaleProvider {
@@ -187,6 +188,28 @@ open class BibleApplication : Application() {
             }
             editor.putBoolean("night_mode_pref", prefValue).apply()
             editor.putString("night_mode_pref3", pref3value).apply()
+        }
+
+        if (prevInstalledVersion < 367) {
+            // migrate user's reading plan files to internal storage
+            val oldReadingPlanDir = File(SharedConstants.MANUAL_INSTALL_DIR, SharedConstants.READINGPLAN_DIR_NAME)
+            val sdPlans = oldReadingPlanDir.list()
+            if (sdPlans == null || sdPlans.isEmpty()) return
+
+            val dotProperties = ".properties"
+            val defaultInternalPlans = CommonUtils.resources.assets.list(SharedConstants.READINGPLAN_DIR_NAME)!!.filter { p -> p.endsWith(dotProperties) }
+
+            for (file in sdPlans.filter { p -> p.endsWith(dotProperties) }) {
+                val userReadingPlanFile = File(oldReadingPlanDir, file)
+                val copyToFile = File(SharedConstants.INTERNAL_READINGPLAN_DIR, file)
+
+                if (userReadingPlanFile.exists() && !defaultInternalPlans.contains(file)) {
+                    Log.i(TAG, "Migrating plan $file to internal reading plan storage")
+                    userReadingPlanFile.copyTo(copyToFile)
+                } else {
+                    Log.i(TAG, "Migrating plans but file $file was not migrated")
+                }
+            }
         }
 
         Log.d(TAG, "Finished all Upgrading")
