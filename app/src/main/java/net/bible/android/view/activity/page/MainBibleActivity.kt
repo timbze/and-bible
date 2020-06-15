@@ -166,7 +166,9 @@ class MainBibleActivity : CustomTitlebarActivityBase(), VerseActionModeMediator.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) isInMultiWindowMode else false
 
     // Top offset with only statusbar and toolbar
-    val topOffset2 get() = topOffset1 + if (!(isFullScreen && actionMode == null)) actionBarHeight else 0
+    val topOffset2: Int get() {
+        return topOffset1 + if (!(isFullScreen && actionMode == null)) actionBarHeight else 0
+    }
     // Top offset with only statusbar and toolbar taken into account always
     val topOffsetWithActionBar get() = topOffset1 + actionBarHeight
 
@@ -190,7 +192,7 @@ class MainBibleActivity : CustomTitlebarActivityBase(), VerseActionModeMediator.
      * return percentage scrolled down page
      */
     private val currentPosition: Float
-        get() = documentViewManager.documentView.currentPosition
+        get() = documentViewManager.documentView?.currentPosition ?: 0F
 
     /**
      * Called when the activity is first created.
@@ -229,12 +231,15 @@ class MainBibleActivity : CustomTitlebarActivityBase(), VerseActionModeMediator.
             rightOffset1 = insets.systemWindowInsetRight
             Log.d(TAG, "onApplyWindowInsets $bottomOffset1 $topOffset1 $leftOffset1 $rightOffset1")
 
+            if(firstTime) {
+                postInitialize()
+            }
+
             if (widthChanged || heightChanged)
                 displaySizeChanged(firstTime)
-            else
-                ABEventBus.getDefault().post(ConfigurationChanged(resources.configuration))
 
-            if(firstTime) firstTime = false
+            if(firstTime)
+                firstTime = false
 
             ViewCompat.onApplyWindowInsets(view, insets)
         }
@@ -297,24 +302,19 @@ class MainBibleActivity : CustomTitlebarActivityBase(), VerseActionModeMediator.
 
             override fun onDrawerClosed(drawerView: View) {}
         })
-
-        // create related objects
-        documentViewManager.buildView()
         // register for passage change and appToBackground events
         ABEventBus.getDefault().register(this)
 
-        // force all windows to be populated
-        windowControl.windowSync.reloadAllWindows(true)
-        updateActions()
+        setupToolbarButtons()
+        setupToolbarFlingDetection()
+
         refreshScreenKeepOn()
         if(!initialized)
             requestSdcardPermission()
-        setupToolbarButtons()
 
-        speakTransport.visibility = View.GONE
-        updateBottomBars()
-        setupToolbarFlingDetection()
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        speakTransport.visibility = View.GONE
+
         if(!initialized) {
             GlobalScope.launch(Dispatchers.Main) {
                 showBetaNotice()
@@ -324,13 +324,23 @@ class MainBibleActivity : CustomTitlebarActivityBase(), VerseActionModeMediator.
         initialized = true
     }
 
+    private fun postInitialize() {
+        // Perform initialization that requires that offsets are set up correctly.
+        Log.d(TAG, "postInitialize")
+        documentViewManager.buildView()
+        windowControl.windowSync.reloadAllWindows(true)
+        updateActions()
+        ABEventBus.getDefault().post(ConfigurationChanged(resources.configuration))
+    }
+
     private fun displaySizeChanged(firstTime: Boolean) {
+        Log.d(TAG, "displaySizeChanged $firstTime")
         updateToolbar()
         updateBottomBars()
         if(!firstTime) {
             ABEventBus.getDefault().post(ConfigurationChanged(resources.configuration))
+            windowControl.windowSizesChanged()
         }
-        windowControl.windowSizesChanged()
     }
 
     private suspend fun showFirstTimeHelp()  {
@@ -687,7 +697,8 @@ class MainBibleActivity : CustomTitlebarActivityBase(), VerseActionModeMediator.
         get() {
             val doc = pageControl.currentPageManager.currentPage.currentDocument
             var key = pageControl.currentPageManager.currentPage.key
-            if(doc?.bookCategory == BookCategory.BIBLE) {
+            val isBible = doc?.bookCategory == BookCategory.BIBLE
+            if(isBible) {
                 key = pageControl.currentBibleVerse
             }
             return if(key is Verse && key.verse == 0) {
@@ -1025,14 +1036,14 @@ class MainBibleActivity : CustomTitlebarActivityBase(), VerseActionModeMediator.
 
     override fun onScreenTurnedOff() {
         super.onScreenTurnedOff()
-        documentViewManager.documentView.onScreenTurnedOff()
+        documentViewManager.documentView?.onScreenTurnedOff()
     }
 
     override fun onScreenTurnedOn() {
         super.onScreenTurnedOn()
         ScreenSettings.refreshNightMode()
         refreshIfNightModeChange()
-        documentViewManager.documentView.onScreenTurnedOn()
+        documentViewManager.documentView?.onScreenTurnedOn()
     }
 
     var currentNightMode: Boolean = false
@@ -1341,7 +1352,7 @@ class MainBibleActivity : CustomTitlebarActivityBase(), VerseActionModeMediator.
     override fun onResume() {
         super.onResume()
         // allow webView to start monitoring tilt by setting focus which causes tilt-scroll to resume
-        documentViewManager.documentView.asView().requestFocus()
+        documentViewManager.documentView?.asView()?.requestFocus()
     }
 
     /**
@@ -1393,7 +1404,7 @@ class MainBibleActivity : CustomTitlebarActivityBase(), VerseActionModeMediator.
      * user swiped right
      */
     operator fun next() {
-        if (documentViewManager.documentView.isPageNextOkay) {
+        if (documentViewManager.documentView!!.isPageNextOkay) {
             windowControl.activeWindowPageManager.currentPage.next()
         }
     }
@@ -1402,7 +1413,7 @@ class MainBibleActivity : CustomTitlebarActivityBase(), VerseActionModeMediator.
      * user swiped left
      */
     fun previous() {
-        if (documentViewManager.documentView.isPagePreviousOkay) {
+        if (documentViewManager.documentView!!.isPagePreviousOkay) {
             windowControl.activeWindowPageManager.currentPage.previous()
         }
     }
