@@ -44,6 +44,8 @@ import net.bible.android.BibleApplication
 import net.bible.android.activity.R
 import net.bible.android.control.backup.BackupControl
 import net.bible.android.control.download.DownloadControl
+import net.bible.android.control.event.ABEventBus
+import net.bible.android.control.event.ToastEvent
 import net.bible.android.control.page.window.ActiveWindowPageManagerProvider
 import net.bible.android.control.page.window.WindowControl
 import net.bible.android.control.readingplan.ReadingPlanControl
@@ -62,7 +64,6 @@ import net.bible.android.view.activity.navigation.History
 import net.bible.android.view.activity.page.MainBibleActivity.Companion.BACKUP_RESTORE_REQUEST
 import net.bible.android.view.activity.page.MainBibleActivity.Companion.BACKUP_SAVE_REQUEST
 import net.bible.android.view.activity.page.MainBibleActivity.Companion.REQUEST_PICK_FILE_FOR_BACKUP_RESTORE
-import net.bible.android.view.activity.page.MainBibleActivity.Companion.mainBibleActivity
 import net.bible.android.view.activity.page.screen.DocumentViewManager
 import net.bible.android.view.activity.readingplan.DailyReading
 import net.bible.android.view.activity.readingplan.ReadingPlanSelectorList
@@ -83,11 +84,9 @@ class MenuCommandHandler @Inject
 constructor(private val callingActivity: MainBibleActivity,
             private val readingPlanControl: ReadingPlanControl,
             private val searchControl: SearchControl,
-            private val activeWindowPageManagerProvider: ActiveWindowPageManagerProvider,
             private val windowControl: WindowControl,
             private val downloadControl: DownloadControl,
             private val backupControl: BackupControl,
-            private val documentViewManager: DocumentViewManager,
             private val errorReportControl: ErrorReportControl
 ) {
 
@@ -103,6 +102,7 @@ constructor(private val callingActivity: MainBibleActivity,
             var handlerIntent: Intent? = null
             var requestCode = ActivityBase.STD_REQUEST_CODE
             // Handle item selection
+            val currentPage = windowControl.activeWindowPageManager.currentPage
             when (menuItem.itemId) {
                 R.id.chooseDocumentButton -> {
                     val intent = Intent(callingActivity, ChooseDocument::class.java)
@@ -134,7 +134,11 @@ constructor(private val callingActivity: MainBibleActivity,
                     menuHelper.setForceShowIcon(true)
                     menuHelper.show()
                 }
-                R.id.searchButton -> handlerIntent = searchControl.getSearchIntent(activeWindowPageManagerProvider.activeWindowPageManager.currentPage.currentDocument)
+                R.id.searchButton -> {
+                    if(currentPage.isSearchable) {
+                        handlerIntent = searchControl.getSearchIntent(currentPage.currentDocument)
+                    }
+                }
                 R.id.settingsButton -> {
                     handlerIntent = Intent(callingActivity, SettingsActivity::class.java)
                     // force the bible view to be refreshed after returning from settings screen because notes, verses, etc. may be switched on or off
@@ -148,9 +152,10 @@ constructor(private val callingActivity: MainBibleActivity,
                 }
                 R.id.mynotesButton -> handlerIntent = Intent(callingActivity, MyNotes::class.java)
                 R.id.speakButton -> {
-                    val isBible = windowControl.activeWindowPageManager.currentPage
-                            .bookCategory == BookCategory.BIBLE
-                    handlerIntent = Intent(callingActivity, if (isBible) BibleSpeakActivity::class.java else GeneralSpeakActivity::class.java)
+                    if(currentPage.isSpeakable) {
+                        val isBible = currentPage.bookCategory == BookCategory.BIBLE
+                        handlerIntent = Intent(callingActivity, if (isBible) BibleSpeakActivity::class.java else GeneralSpeakActivity::class.java)
+                    }
                 }
                 R.id.dailyReadingPlanButton ->
                     // show todays plan or allow plan selection
