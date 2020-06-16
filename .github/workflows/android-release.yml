@@ -37,12 +37,12 @@ jobs:
 
     - name: Sign apk
       run: |
-        ls
         cd app/build/outputs/apk/release
-        zipalign -v -p 4 app-release-unsigned.apk app-release-unsigned-aligned.apk
+        $ANDROID_HOME/build-tools/29.0.3/zipalign -v -p 4 app-release-unsigned.apk app-release-unsigned-aligned.apk
         echo ${{ secrets.JKS_BASE64 }} | base64 --decode > keystore.jks
-        apksigner sign --ks keystore.jks --ks-pass ${{ secrets.KEYSTORE_PASS }} --key-pass ${{ secrets.KEY_PASS }} --out ${{ GITHUB_WORKSPACE }}/andbible-beta-${{ github.ref }}.apk app-release-unsigned-aligned.apk
+        $ANDROID_HOME/build-tools/29.0.3/apksigner sign --ks keystore.jks --ks-pass 'pass:${{ secrets.KEYSTORE_PASS }}' --key-pass 'pass:${{ secrets.KEY_PASS }}' --out $GITHUB_WORKSPACE/andbible-beta-$GITHUB_REF.apk app-release-unsigned-aligned.apk
         rm -f keystore.jks
+        cd $GITHUB_WORKSPACE
 
     - name: Create release
       id: create_release
@@ -50,8 +50,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Beta ${{ github.ref }}
+        tag_name: ${{ env.GITHUB_REF }}
+        release_name: Beta ${{ env.GITHUB_REF }}
 
     - name: Upload Release Apk
       uses: actions/upload-release-asset@v1
@@ -59,8 +59,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./andbible-beta-${{ github.ref }}.apk
-        asset_name: andbible-beta-${{ github.ref }}.apk
+        asset_path: ./andbible-beta-${{ env.GITHUB_REF }}.apk
+        asset_name: andbible-beta-${{ env.GITHUB_REF }}.apk
         asset_content_type: application/vnd.android.package-archive
 
     - name: Before saving cache
