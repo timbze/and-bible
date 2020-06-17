@@ -3,7 +3,7 @@ name: Android CI
 on:
   push:
     branches: [ master ]
-    tags: [ build-* ]
+    tags: [ build-*, beta-*, production-* ]
   pull_request:
     branches: [ master ]
 
@@ -56,7 +56,9 @@ jobs:
 
     - name: Get tag name
       id: tag_name
-      run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+      run: |
+        echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
+        echo if [[ $GITHUB_REF =~ ".+build-.+|.+beta-.+" ]]; then ::set-output name=TAG_TYPE::'Beta' elif [[ $GITHUB_REF =~ ".+production-.+" ]]; ::set-output name=TAG_TYPE::'Release' fi
 
     - name: Create apk release file
       if: contains(github.ref, 'refs/tags/')
@@ -80,9 +82,10 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG_NAME: ${{ steps.tag_name.outputs.TAG }}
+        TAG_TYPE: ${{ steps.tag_name.outputs.TAG_TYPE }}
       with:
         tag_name: ${{ env.TAG_NAME }}
-        release_name: Beta ${{ env.TAG_NAME }}
+        release_name: ${{ env.TAG_TYPE }} ${{ env.TAG_NAME }}
 
     - name: Upload Release Apk
       if: contains(github.ref, 'refs/tags/')
