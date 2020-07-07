@@ -55,11 +55,12 @@ jobs:
 
     - name: Get variables
       id: tag_name
+      continue-on-error: true
       run: |
         echo ::set-output name=TAG::${GITHUB_REF#refs/tags/}
-        echo $(grep versionName ./app/src/main/AndroidManifest.xml | cut -d\" -f2) > VNAME
-        echo ::set-output name=VERSION_NAME::$(cat VNAME)
-        echo ::set-output name=RELEASE_NOTES::$(if [ -f ./fastlane/metadata/android/en-US/changelogs/$(cat VNAME).txt ]; then cat ./fastlane/metadata/android/en-US/changelogs/$(cat VNAME).txt; else echo ""; fi )
+        echo ::set-output name=VERSION_NAME::$(grep versionName ./app/src/main/AndroidManifest.xml | cut -d\" -f2)
+        cat > ./RELEASENOTES.txt
+        cp ./fastlane/metadata/android/en-US/changelogs/${{ env.VERSION_NAME }}.txt RELEASENOTES.txt
 
     - name: Create apk release file
       if: contains(github.ref, 'refs/tags/')
@@ -84,11 +85,10 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         TAG_NAME: ${{ steps.tag_name.outputs.TAG }}
         VERSION_NAME: ${{ steps.tag_name.outputs.VERSION_NAME }}
-        RELEASE_NOTES: ${{ steps.tag_name.outputs.RELEASE_NOTES }}
       with:
         tag_name: ${{ env.TAG_NAME }}
         release_name: "Release ${{ env.VERSION_NAME }}"
-        body: ${{ env.RELEASE_NOTES }}
+        body_path: ./RELEASENOTES.txt
 
     - name: Upload Release Apk
       if: contains(github.ref, 'refs/tags/')
