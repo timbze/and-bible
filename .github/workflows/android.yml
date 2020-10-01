@@ -62,6 +62,7 @@ jobs:
         grep versionName ./app/src/main/AndroidManifest.xml | cut -d\" -f2 > VNAME
         echo ::set-output name=VERSION_NAME::$(cat VNAME)
         echo ::set-output name=RELEASE_TITLE::$( if [[ $GITHUB_REF =~ build- ]]; then git log -1 --pretty=%B; else echo "Release $(cat VNAME)"; fi )
+        echo ::set-output name=PRERELEASE::$( if [[ $GITHUB_REF =~ build- || $GITHUB_REF =~ beta- ]]; then echo true; else echo false; fi )
         echo "./fastlane/metadata/android/en-US/changelogs/$(cat VNAME).txt" > CLPATH
         if [[ -f $(cat CLPATH) ]] && ! [[ $GITHUB_REF =~ build- ]]; then cp $(cat CLPATH) RELEASENOTES.txt; else cat > ./RELEASENOTES.txt; fi
 
@@ -82,12 +83,10 @@ jobs:
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TAG_NAME: ${{ steps.tag_name.outputs.TAG }}
-        VERSION_NAME: ${{ steps.tag_name.outputs.VERSION_NAME }}
-        RELEASE_TITLE: ${{ steps.tag_name.outputs.RELEASE_TITLE }}
       with:
-        tag_name: ${{ env.TAG_NAME }}
-        release_name: ${{ env.RELEASE_TITLE }}
+        tag_name: ${{ steps.tag_name.outputs.TAG }}
+        release_name: ${{ steps.tag_name.outputs.RELEASE_TITLE }}
+        prerelease: ${{ steps.tag_name.outputs.PRERELEASE }}
         body_path: ./RELEASENOTES.txt
 
     - name: Upload Release Apk
@@ -95,11 +94,10 @@ jobs:
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        TAG_NAME: ${{ steps.tag_name.outputs.TAG }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./andbible-${{ env.TAG_NAME }}.apk
-        asset_name: andbible-${{ env.TAG_NAME }}.apk
+        asset_path: ./andbible-${{ steps.tag_name.outputs.TAG }}.apk
+        asset_name: andbible-${{ steps.tag_name.outputs.TAG }}.apk
         asset_content_type: application/vnd.android.package-archive
 
     - name: Before saving cache
