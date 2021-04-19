@@ -43,7 +43,7 @@ import java.io.ObjectOutputStream
 
 import java.util.*
 
-const val DATABASE_VERSION = 45
+const val DATABASE_VERSION = 46
 
 class Converters {
     @TypeConverter
@@ -138,7 +138,7 @@ class Converters {
         BookmarkEntities.StudyPadTextEntry::class,
         BookmarkEntities.BookmarkToLabel::class,
         ReadingPlanEntities.ReadingPlan::class,
-        ReadingPlanEntities.ReadingPlanStatus::class,
+        ReadingPlanEntities.ReadingPlanHistory::class,
         WorkspaceEntities.Workspace::class,
         WorkspaceEntities.Window::class,
         WorkspaceEntities.HistoryItem::class,

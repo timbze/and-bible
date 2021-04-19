@@ -20,31 +20,49 @@ package net.bible.android.database.readingplan
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.Date
 
 class ReadingPlanEntities {
 
-    /** Stores information for plan, like start date and current day user is on.
-     * Plans that exist are determined by text files. Row will only exist here for plan
-     * that has already been started */
-    @Entity(tableName = "readingplan",
-        indices = [Index(name = "index_readingplan_plan_code",value=["plan_code"], unique = true)])
+    @Entity
     data class ReadingPlan(
-        @ColumnInfo(name = "plan_code") val planCode: String,
-        @ColumnInfo(name = "plan_start_date") var planStartDate: Date,
-        @ColumnInfo(name = "plan_current_day", defaultValue = "1") var planCurrentDay: Int = 1,
-        @PrimaryKey(autoGenerate = true) @ColumnInfo(name="_id") val id: Int? = null
+        /** Previously called planCode */
+        @PrimaryKey
+        val fileName: String,
+        var startDate: Date? = null,
+        var dayComplete: Int? = null,
+        /** This is so that reading plan status can store historical reading records and not only the
+         * current reading cycle. This is not a count of how many times the user has been through the plan,
+         * it is incremented every time the plan is reset */
+        var readIteration: Int? = null,
+        /**
+         * For those reading plans that were in progress during db v44-45 upgrade. ReadingPlanHistory will now save
+         * records for each read day but status table in v44 was only used while day reading was in progress, then deleted
+         * when day is done. With "upgraded" field we know that if minimum day in ReadingPlanHistory for a certain
+         * plan is 45, that all days before that are done.
+         */
+        var upgraded: Boolean = false,
     )
 
-    @Entity(tableName = "readingplan_status",
-        indices = [Index(name="code_day", value = ["plan_code", "plan_day"], unique = true)]
+    @Entity(
+        primaryKeys = [ "readingPlanFileName", "dayNumber", "readIteration" ],
+        foreignKeys =
+        [
+            ForeignKey(entity = ReadingPlan::class, parentColumns = [ "fileName" ], childColumns = [ "readingPlanFileName" ], onDelete = ForeignKey.CASCADE, onUpdate = ForeignKey.CASCADE)
+        ],
+        indices = [
+            Index("readingPlanFileName")
+        ]
     )
-    data class ReadingPlanStatus(
-        @ColumnInfo(name = "plan_code") val planCode: String,
-        @ColumnInfo(name = "plan_day") val planDay: Int,
-        @ColumnInfo(name = "reading_status") val readingStatus: String,
-        @PrimaryKey(autoGenerate = true) @ColumnInfo(name="_id") val id: Int? = null
+    data class ReadingPlanHistory(
+        val readingPlanFileName: String,
+        val dayNumber: Int,
+        /** See note on [ReadingPlan.readIteration]*/
+        var readIteration: Int,
+        var dateCompleted: Date? = null,
+        var readStatus: String? = null,
     )
 }

@@ -19,7 +19,6 @@ package net.bible.service.db
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase.CONFLICT_FAIL
-import android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE
 import android.util.Log
 import androidx.room.Room
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -30,6 +29,7 @@ import net.bible.android.database.AppDatabase
 import net.bible.android.database.bookmarks.BookmarkStyle
 import net.bible.android.database.bookmarks.KJVA
 import net.bible.android.database.bookmarks.SPEAK_LABEL_NAME
+import net.bible.android.database.DATABASE_VERSION
 import net.bible.service.db.bookmark.BookmarkDatabaseDefinition
 import net.bible.service.db.mynote.MyNoteDatabaseDefinition
 import net.bible.service.db.readingplan.ReadingPlanDatabaseOperations
@@ -790,12 +790,11 @@ private val MIGRATION_42_43_expandContent = object : Migration(42, 43) {
 private val MIGRATION_43_44_topMargin = object : Migration(43, 44) {
     override fun doMigrate(db: SupportSQLiteDatabase) {
         db.apply {
-            db.execSQL("ALTER TABLE `Workspace` ADD COLUMN `text_display_settings_topMargin` INTEGER DEFAULT NULL")
-            db.execSQL("ALTER TABLE `PageManager` ADD COLUMN `text_display_settings_topMargin` INTEGER DEFAULT NULL")
+            execSQL("ALTER TABLE `Workspace` ADD COLUMN `text_display_settings_topMargin` INTEGER DEFAULT NULL")
+            execSQL("ALTER TABLE `PageManager` ADD COLUMN `text_display_settings_topMargin` INTEGER DEFAULT NULL")
         }
     }
 }
-
 
 private val MIGRATION_44_45_nullColors = object : Migration(44, 45) {
     override fun doMigrate(db: SupportSQLiteDatabase) {
@@ -824,6 +823,29 @@ private val MIGRATION_44_45_nullColors = object : Migration(44, 45) {
             db.execSQL("UPDATE `PageManager` SET text_display_settings_colors_dayBackground=${white} WHERE text_display_settings_colors_dayBackground IS NULL AND $isSpecific");
             db.execSQL("UPDATE `PageManager` SET text_display_settings_colors_dayNoise=0 WHERE text_display_settings_colors_dayNoise IS NULL AND $isSpecific");
             db.execSQL("UPDATE `PageManager` SET text_display_settings_colors_nightNoise=0 WHERE text_display_settings_colors_nightNoise IS NULL AND $isSpecific");
+        }
+    }
+}
+
+private val MIGRATION_45_46_readingPlanImport = object : Migration(45, 46) {
+    override fun doMigrate(db: SupportSQLiteDatabase) {
+        db.apply {
+            execSQL("ALTER TABLE readingplan RENAME TO readingplanold")
+            execSQL("CREATE TABLE IF NOT EXISTS `ReadingPlan` (`fileName` TEXT NOT NULL, `startDate` INTEGER, `dayComplete` INTEGER, `readIteration` INTEGER, PRIMARY KEY(`fileName`))")
+            execSQL("CREATE TABLE IF NOT EXISTS `ReadingPlanHistory` (`readingPlanFileName` TEXT NOT NULL, `dayNumber` INTEGER NOT NULL, `readIteration` INTEGER NOT NULL, `dateCompleted` INTEGER, `readStatus` TEXT, PRIMARY KEY(`readingPlanFileName`, `dayNumber`, `readIteration`), FOREIGN KEY(`readingPlanFileName`) REFERENCES `ReadingPlan`(`fileName`) ON UPDATE CASCADE ON DELETE CASCADE )")
+            try {
+                execSQL("""INSERT INTO ReadingPlan(fileName,startDate,dayComplete,readIteration,upgraded) SELECT plan_code,plan_start_date,plan_current_day-1,1,1 FROM readingplanold WHERE plan_current_day > 1""")
+            } catch (e: Exception) {
+                Log.w(TAG, "Error while trying to migrate ReadingPlan table")
+            }
+            try {
+                execSQL("INSERT INTO ReadingPlanHistory(readingPlanFileName,dayNumber,readIteration,readStatus) SELECT plan_code, plan_day, 1, reading_status FROM readingplan_status")
+            } catch (e: Exception) {
+                Log.w(TAG, "Error while trying to migrate ReadingPlanHistory table")
+            }
+
+            execSQL("DROP TABLE readingplanold")
+            execSQL("DROP TABLE readingplan_status")
         }
     }
 }
@@ -886,7 +908,8 @@ object DatabaseContainer {
                         MIGRATION_42_43_expandContent,
                         MIGRATION_43_44_topMargin,
                         MIGRATION_44_45_nullColors,
-                        // When adding new migrations, remember to increment DATABASE_VERSION too
+                        MIGRATION_45_46_readingPlanImport,
+                        /** When adding new migrations, remember to increment [DATABASE_VERSION] too */
                     )
                     .build()
                     .also { instance = it }
@@ -899,3 +922,4 @@ object DatabaseContainer {
         }
     }
 }
+
