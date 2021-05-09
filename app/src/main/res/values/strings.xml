@@ -7,6 +7,7 @@
     <string name="app_name_short">Bible Study</string>
     <string name="app_name_medium">Bible Study (And Bible)</string>
     <string name="app_name_long">Bible Study app, by And Bible Open Source Project</string>
+    <string name="project">And Bible Open Source Project</string>
 
     <string name="version_text">Version %s</string>
     <string name="no_sdcard_error">Please insert an SD card and restart application.</string>
@@ -419,6 +420,7 @@
     <string name="speak_sleep_timer_title">Sleep timer</string>
 
     <string name="speak_no_books_available">No books available to speak</string>
+    <string name="speak_general_error">Speak could not be started for this book</string>
 
     <string name="repeat_passage">Repeat passage</string>
     <string name="set_repeat_passage_range">Set repeat passage range</string>
@@ -743,13 +745,13 @@
 
     <string name="download_dialog_message">The following books could not be downloaded:</string>
     <string name="select_multiple">Select multiple</string>
-    <string name="journal_description">User-editable study pads with custom text and bookmarks (pseudo document)</string>
-    <string name="my_notes_description">User-editable notes attached to bookmarks (pseudo document)</string>
+    <string name="journal_description">User-editable study pads with custom text and bookmarks</string>
+    <string name="my_notes_description">User-editable notes attached to bookmarks</string>
     <string name="my_notes_abbreviation">My Notes</string>
     <string name="studypads">Study Pads</string>
-    <string name="multi_description">Multiple references (pseudo document)</string>
+    <string name="multi_description">Multiple references</string>
     <string name="multi_abbreviation">Multiple</string>
-    <string name="compare_description">Compare translations (pseudo document)</string>
+    <string name="compare_description">Compare translations</string>
     <string name="compare_abbreviation">Compare</string>
     <string name="http_forbidden">Forbidden</string>
     <string name="http_not_found">Not found</string>
@@ -764,34 +766,75 @@
     <string name="show_unlock_info">Module &amp; unlock info</string>
 
     <string name="prefs_show_error_box_title">Show Javascript error box</string>
-    <string name="prefs_show_error_box_summary">Useful for debugging Bibleview errors. This will make the app slower.</string>
+    <string name="prefs_show_error_box_summary">Useful for developers when debugging BibleView javascript side errors. This will make the app slower.</string>
     <string name="active_window_indicator_title">Show active window indicator</string>
     <string name="active_window_indicator_summary">Highlight window corners to help recognising which window is active</string>
     <string name="app_licence_title">Open Source License</string>
-    <string name="give_feedback_title">Give us feedback</string>
-    <string name="feedback_subject">Feedback to And Bible Open Source development team</string>
 
     <string name="how_to_contribute">How to contribute?</string>
     <string name="confirm_delete_bookmarks">Do you want to remove %d bookmarks and their notes?</string>
-    <string name="confirm_delete_study_pads">Do you want to remove %d bookmark labels / study pads? Also all associated bookmarks and study pad notes labels will be removed.</string>
+    <string name="confirm_delete_study_pads">Do you want to remove %d bookmark labels / study pads? Also all associated bookmarks and study pad notes will be removed.</string>
     <string name="toast_deletion_cancel">Undo delete by pressing cancel button.</string>
     <string name="module_size_megabytes">%.1f MB</string>
-    <string name="tell_friend_title">Invite a friend</string>
-    <string name="tell_friend_message">I would like to recommend the Bible Study app by And Bible Open Source Project, to you.
-        It is a powerful, yet easy to use, offline Bible study application for Android.
-        \n\nInstall it from Play Store: %s
-        \nRead more &amp; more install options: %s.
-    </string>
+    <string name="tell_friend_title">Recommend to a friend</string>
+    <string name="tell_friend_message1">I would like to recommend %s to you.</string>
+    <string name="tell_friend_message2">It is a powerful, yet easy to use, offline Bible study application for Android.</string>
+    <string name="tell_friend_message3">Install it from Play Store: %s</string>
+    <string name="tell_friend_message4">Read more &amp; more install options: %s</string>
     <string name="share_verse_ok">Share / Copy</string>
     <string name="share_verse_menu_title">Share / copy…</string>
     <string name="show_versenumbers">Show verse numbers</string>
     <string name="show_full_verses">Show full verses</string>
     <string name="advertise_app">Advertise app</string>
-    <string name="verse_share_advertise">Shared using %s".</string>
+    <string name="verse_share_advertise">Shared using %s.</string>
     <string name="abbreviate_reference">Abbreviate reference</string>
     <string name="backup_button">Backup</string>
     <string name="back_button">Back</string>
     <string name="upgrading_database">Upgrading database. Please wait…</string>
     <string name="initializing_app">Initializing application…</string>
     <string name="show_notes">Show notes</string>
+    <!-- 1. parameter is current Webview version. 2. minimum version 3. app name 4. Google Play link that takes user to WebView entry in Google Play to upgrade it. -->
+    <string name="old_webview">Android WebView package is too old (%s). You need to upgrade your Android WebView package to at least version %s to use %s. For most devices this can be done via %s.</string>
+    <string name="play">Google Play</string>
+    <string name="proceed_anyway">Proceed anyway</string>
+    <string name="rate_title">Rating and reviewing app</string>
+    <string name="rate_message5">
+        Positive and detailed reviews help And Bible Open Source Project a lot. Thank you!
+    </string>
+    <string name="rate_message6">
+        Before reviewing negative review, please consider the following:
+    </string>
+
+    <!-- parameters are actions (file a bug, send email) -->
+    <string name="rate_message1">
+        If have a problem with app, please %s or %s instead.
+    </string>
+    <!-- param is "please report maintainers" -->
+    <string name="rate_message2">
+        If some text / Bible translation has an issue, %s.
+    </string>
+    <!-- param is "please read what you can do" -->
+    <string name="rate_message3">
+        If particular text is not available in the application, %s.
+    </string>
+    <string name="rate_message4">
+        The developers of this app are not responsible for maintaining documents.
+    </string>
+    <string name="bug_report">
+        send a bug report (from Main Menu)
+    </string>
+    <string name="how_to_help">
+        please read what you can do to help
+    </string>
+    <string name="send_email">
+       send email to developers
+    </string>
+    <string name="proceed_google_play">
+        Proceed to Google Play
+    </string>
+    <string name="text_maintainers">
+       please report issues to text maintainers
+    </string>
+
+
 </resources>

@@ -45,7 +45,6 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.annotation.RequiresApi
-import androidx.core.text.layoutDirection
 import androidx.core.view.GestureDetectorCompat
 import androidx.webkit.WebViewAssetLoader
 import kotlinx.coroutines.CompletableDeferred
@@ -133,7 +132,7 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
                 private val bibleKeyHandler: BibleKeyHandler,
                 private val pageControl: PageControl,
                 private val pageTiltScrollControl: PageTiltScrollControl,
-                private val linkControl: LinkControl,
+                val linkControl: LinkControl,
                 internal val bookmarkControl: BookmarkControl
 ) : WebView(mainBibleActivity.applicationContext), DocumentView
 {
@@ -241,6 +240,7 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
         val textRange = BookmarkEntities.TextRange(selection.startOffset!!, selection.endOffset!!)
         val bookmark = BookmarkEntities.Bookmark(verseRange, textRange, book)
         val initialLabels = displaySettings.bookmarksAssignLabels!!.toList()
+        bookmark.primaryLabelId = initialLabels.firstOrNull()
         bookmarkControl.addOrUpdateBookmark(bookmark, initialLabels)
     }
 

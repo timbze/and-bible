@@ -26,7 +26,7 @@ import {
     watch
 } from "@vue/runtime-core";
 import {sprintf} from "sprintf-js";
-import {Deferred, setupWindowEventListener} from "@/utils";
+import {adjustedColor, Deferred, setupWindowEventListener} from "@/utils";
 import {computed} from "@vue/reactivity";
 import {throttle} from "lodash";
 import {emit, Events, setupEventBusListener} from "@/eventbus";
@@ -35,12 +35,16 @@ import {
     faBookmark,
     faEdit,
     faEllipsisH,
+    faFileAlt,
     faHeadphones,
-    faIndent, faInfo,
+    faIndent,
+    faInfoCircle,
     faOutdent,
     faPlusCircle,
     faShareAlt,
-    faSort, faTimes,
+    faSort,
+    faTags,
+    faTimes,
     faTrash
 } from "@fortawesome/free-solid-svg-icons";
 import Color from "color";
@@ -147,7 +151,6 @@ export function useConfig(documentType) {
         makeNonCanonicalItalic: true,
         showSectionTitles: true,
         showStrongsSeparately: false,
-        showCrossReferences: true,
         showFootNotes: true,
         fontFamily: "sans-serif",
         fontSize: 16,
@@ -279,16 +282,6 @@ export function useCommon() {
         return new Date(timestamp).toLocaleString()
     }
 
-    function adjustedColor(color) {
-        let col = Color(color);
-        if(config.nightMode) {
-            col = col.darken(0.2);
-        } else {
-            col = col.darken(0.2);
-        }
-        return col.hsl();
-    }
-
     return {config, appSettings, calculatedConfig, strings, sprintf, split,
         adjustedColor, formatTimestamp, abbreviated, emit, Events
     }
@@ -298,10 +291,12 @@ export function useFontAwesome() {
     library.add(faShareAlt)
     library.add(faHeadphones)
     library.add(faEdit)
+    library.add(faTags)
     library.add(faBookmark)
     library.add(faPlusCircle)
     library.add(faTrash)
-    library.add(faInfo)
+    library.add(faFileAlt)
+    library.add(faInfoCircle)
     library.add(faTimes)
     library.add(faEllipsisH)
     library.add(faSort)
@@ -365,9 +360,11 @@ export function useJournal(label) {
 export function useReferenceCollector() {
     const references = reactive([]);
     function collect(linkRef) {
+        console.log("PUSH" ,linkRef);
         references.push(linkRef);
     }
     function clear() {
+        console.error("CLEAR");
         references.splice(0);
     }
     return {references, collect, clear}

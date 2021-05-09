@@ -218,6 +218,10 @@ export function useAndroid({bookmarks}, config) {
         android.shareBookmarkVerse(bookmarkId);
     }
 
+    function openStudyPad(labelId) {
+        android.openStudyPad(labelId);
+    }
+
     function updateOrderNumber(labelId, bookmarks, journals) {
         const orderNumberPairs = l => l.map(v=>[v.id, v.orderNumber])
         android.updateOrderNumber(labelId, JSON.stringify(
@@ -246,6 +250,10 @@ export function useAndroid({bookmarks}, config) {
         }
     }
 
+    function setAsPrimaryLabel(bookmarkId, labelId) {
+        android.setAsPrimaryLabel(bookmarkId, labelId);
+    }
+
     const exposed = {
         setActionMode,
         reportInputFocus,
@@ -265,6 +273,8 @@ export function useAndroid({bookmarks}, config) {
         updateJournalEntry,
         toast,
         shareBookmarkVerse,
+        openStudyPad,
+        setAsPrimaryLabel,
     }
 
     if(config.developmentMode) return {

@@ -22,11 +22,13 @@
       <div ref="modal" @click.stop class="modal-content" :class="{blocking}"
       >
         <div ref="header" class="modal-header">
-          <div class="title">
-            <slot name="title"/>
-          </div>
+          <slot name="title-div">
+            <div class="title">
+              <slot name="title"/>
+            </div>
+          </slot>
           <slot name="buttons">
-            <button class="modal-action-button right" @touchstart.stop="$emit('close')">
+            <button class="modal-action-button right" @touchstart.stop @click.stop="$emit('close')">
               <FontAwesomeIcon icon="times"/>
             </button>
           </slot>
@@ -47,7 +49,7 @@ import {inject, onMounted} from "@vue/runtime-core";
 import {useCommon} from "@/composables";
 import {Events, emit, setupEventBusListener} from "@/eventbus";
 import {ref} from "@vue/reactivity";
-import {draggableElement, setupWindowEventListener} from "@/utils";
+import {draggableElement, isInViewport, setupWindowEventListener} from "@/utils";
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
 
 export default {
@@ -67,6 +69,11 @@ export default {
     }
 
     setupWindowEventListener("resize", resetPosition)
+    setupWindowEventListener("scroll", () => {
+      if(!isInViewport(modal.value)) {
+        resetPosition()
+      }
+    })
 
     onMounted(async () => {
       resetPosition()

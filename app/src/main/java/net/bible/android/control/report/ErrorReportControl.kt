@@ -30,11 +30,13 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.widget.LinearLayout
 import androidx.core.content.FileProvider
+import androidx.webkit.WebViewCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.bible.android.BibleApplication
 import net.bible.android.activity.BuildConfig
 import net.bible.android.activity.R
 import net.bible.android.activity.databinding.BackupViewBinding
@@ -135,6 +137,15 @@ class ErrorReportControl @Inject constructor() {
             }
         }
     }
+
+    suspend fun checkCrash(activity: ActivityBase) {
+        val crashed = CommonUtils.sharedPreferences.getBoolean("app-crashed", false)
+        if (crashed) {
+            CommonUtils.sharedPreferences.edit().putBoolean("app-crashed", false).commit() // Yes, we want this to be flushed to file immediately
+            val msg = activity.getString(R.string.error_occurred_crash_last_time)
+            showErrorDialog(activity, msg)
+        }
+    }
 }
 
 const val SCREENSHOT_FILE = "screenshot.webp"
@@ -146,8 +157,10 @@ object BugReport {
         text.append("Android version: ").append(Build.VERSION.RELEASE).append("\n")
         text.append("Android SDK version: ").append(Build.VERSION.SDK_INT).append("\n")
         text.append("Manufacturer: ").append(Build.MANUFACTURER).append("\n")
-        text.append("Model: ").append(Build.MODEL).append("\n\n")
-        text.append("Storage Mb free: ").append(megabytesFree).append("\n\n")
+        text.append("Model: ").append(Build.MODEL).append("\n")
+        text.append("Storage Mb free: ").append(megabytesFree).append("\n")
+        text.append("WebView version: ").append(WebViewCompat.getCurrentWebViewPackage(BibleApplication.application)?.versionName).append("\n")
+        text.append("SQLITE version: ").append(BibleApplication.application.sqliteVersion).append("\n")
         val runtime = Runtime.getRuntime()
         val usedMemInMB = (runtime.totalMemory() - runtime.freeMemory()) / 1048576L
         val maxHeapSizeInMB = runtime.maxMemory() / 1048576L

@@ -14,7 +14,9 @@
   <string name="history">Geskiedenis</string>
   <string name="speak">Praat</string>
   <string name="help">Hulp</string>
+  <string name="information">Inligting</string>
   <string name="other">Ander</string>
+  <string name="contact">Kontak</string>
   <string name="help_and_tips">Hulp &amp; wenke</string>
   <string name="administration">Administrasie</string>
   <string name="rate_application">Be-oordeel &amp; hersien in Google Play</string>
@@ -54,6 +56,7 @@
   <string name="search_current_book">Huidige boek</string>
   <string name="error_executing_search">Ongeldige soektog</string>
   <!--Preferences-->
+  <string name="prefs_show_verseno_summary">Wys hoofstuk &amp; vers nommers</string>
   <string name="prefs_verse_per_line_summary">Wys elke vers op \'n ander lyn</string>
   <string name="prefs_show_bookmarks_summary">Onmerk om alle boekmerke te verberg</string>
   <string name="prefs_show_mynotes_summary">Wys ikoon in verse met My nota</string>
@@ -63,6 +66,7 @@
   <string name="prefs_section_title_summary">Wys nie-kanonieke seksietitels</string>
   <string name="prefs_red_letter_summary">Wys woorde van Christus in rooi</string>
   <string name="prefs_text_size_title">Skrif voorkeure</string>
+  <string name="prefs_show_verseno_title">Hoofstuk &amp; vers nommers</string>
   <string name="prefs_verse_per_line_title">Een vers per lyn</string>
   <string name="prefs_show_bookmarks_title">Wys Boekmerke</string>
   <string name="prefs_show_mynotes_title">Wys My Nota ikone</string>
@@ -72,6 +76,11 @@
   <string name="prefs_section_title_title">Afdeling Titels</string>
   <string name="prefs_red_letter_title">Rooi woorde</string>
   <string name="prefs_tilt_to_scroll_title">Kantel om te skuif</string>
+  <string name="prefs_toolbar_button_action_title">Aksie vir nutsbalk knoppie druk</string>
+  <string name="prefs_toolbar_button_action_summary">Aksie om te neem wanneer jy Bybel- of Kommentaar nutsbalk knoppies druk</string>
+  <string name="prefs_toolbar_button_action_default">Druk om kieslys oop te maak, lang druk vir dokumente skerm (standaard)</string>
+  <string name="prefs_toolbar_button_action_swap_menu">Druk om volgende dokument oop te maak, lang druk om kieslys oop te maak</string>
+  <string name="prefs_toolbar_button_action_swap_activity">Druk om volgende dokument oop te maak, lang druk vir dokumente skerm</string>
   <string name="prefs_night_mode_title">Nag mode skakel</string>
   <string name="prefs_night_mode_summary">Of u outomaties oorskakel na die nag mode (as die toestel ondersteun word), met die hand of via die stelselinstelling (Android 10+).</string>
   <string name="prefs_night_mode_manual">handleiding</string>
@@ -96,6 +105,7 @@
   <string name="reversed_split_mode">Omgekeerde verdeel modus</string>
   <string name="add_ellipsis">%s ...</string>
   <string name="font_size_pt">%dpt</string>
+  <string name="value_mm">%dmm</string>
   <string name="auto_fullscreen_summary">Skakel outomaties oor na volskerm wanneer u teks blaai. Wenk: u kan ook altyd oorskakel na die volledige skerm deur te dubbel klik op die skerm.</string>
   <string name="prefs_margin_size_title">Verander kantruimte grootte</string>
   <string name="prefs_margin_size_mm_title">Kantruimte grootte (%d/%d/%dmm)</string>
@@ -117,6 +127,8 @@
   <string name="pref_maximum_width_of_text_label_mm">Maksimum breedte van teks (%d mm)</string>
   <string name="prefs_line_spacing_pt">Lyn spasiëring %1.1fx</string>
   <string name="pref_font_family_label">Skrif familie</string>
+  <string name="prefs_top_margin_title">Boonste kantlyn</string>
+  <string name="prefs_top_margin_summary">Voeg kantlyn (met visuele aanduiding) bo-aan die venster wat die Bybelse dokument bevat. Die Bybel word geblaai sodat die huidige vers onder die kantlyn begin.</string>
   <string name="prefs_hyphenation_title"> 
 Woordafbreking</string>
   <string name="prefs_hyphenation_summary">Outomaties koppel woorde met koppelteken, as taal ondersteun word</string>
@@ -124,11 +136,28 @@ Woordafbreking</string>
   <string name="line_spacing_title">Lyn spasiëring</string>
   <string name="line_spacing_summary">Stel die spasie tussen lyne</string>
   <string name="select_none">Kies geen</string>
+  <string name="reset_are_you_sure">Is jy seker dat jy al hierdie waardes wil terugstel?</string>
   <string name="window_pinning_menutitle">Venster vasgespeld</string>
   <string name="hide_window_buttons_title">Versteek venster knoppies</string>
+  <string name="hide_window_buttons_summary">Venster knoppies wat aan die regterkant van die Bybel aansigte vertoon word, word weggesteek. Venster navigasiebalk aan die onderkant word steeds vertoon en jy kan venste ropspring kieslys oopmaak deur hulle lank te klik</string>
+  <string name="hide_bible_reference_overlay_title">Versteek Bybel verwysing oorleg</string>
+  <string name="hide_bible_reference_overlay_summary">Moenie die semi-deursigtige Bybel verwysings oorleg wys wanneer toep in volskerm modus is nie</string>
   <string name="full_screen_hide_buttons_pref_title">Versteek venster knoppiebalk in volskerm</string>
   <string name="full_screen_hide_buttons_pref_summary">Wanneer na volskerm modus oorskakel, verberg outomaties die venster knoppiebalk wat aan die onderkant van die skerm is</string>
+  <string name="prefs_dictionaries_cat">Woordeboeke</string>
+  <string name="choose_strongs_greek_dictionary_title">Strongs Griekse woordeboek</string>
+  <string name="choose_strongs_greek_dictionary_summary">Kies Strongs woordeboek vir Griekse woord definisies</string>
+  <string name="choose_strongs_hebrew_dictionary_title">Strongs Griekse woordeboek</string>
+  <string name="choose_strongs_hebrew_dictionary_summary">Kies Strongs woordeboek vir Hebreeuse  woord definisies</string>
+  <string name="choose_strongs_greek_morphology_title">Robinson Griekse morfologie</string>
+  <string name="choose_strongs_greek_morphology_summary">Kies woordeboek vir Robinson Griekse morfologie definisies</string>
+  <string name="prefs_top_margin_title_mm">Boonste kantlyn (%d mm)</string>
   <string name="font_size_title">Skrif grootte</string>
+  <string name="font_size_title_pt">Skrif grootte (%dpt)</string>
+  <string name="prefs_font_text_size_summary">Verstel hoof teks skrif grootte</string>
+  <string name="pref_font_family_label_name">Skrif familie (%s)</string>
+  <string name="prefs_font_family_summary">Verander skrif familie. Wenk: meer lettertipes kan geïnstalleer word via Aflaai Dokumente / Byvoegings.</string>
+  <string name="prefs_text_bookmarks_title">Boekmerk &amp; My Notas instellings</string>
   <!--Colors preferences-->
   <string name="prefs_text_colors_menutitle">Kleur instellings</string>
   <string name="window_color_settings_title">Venster kleur instellings</string>
@@ -168,19 +197,33 @@ Woordafbreking</string>
   <string name="morph_robinson_not_installed">Laai asseblief \'Robinson se morfologiese analise Kodes\' woordeboek af</string>
   <!--Module download-->
   <string name="download">Laai Dokumente af</string>
+  <string name="redownload">Herlaai Dokumente</string>
   <string name="download_confirmation">Laai \'n Bybel van die internet af?</string>
+  <string name="download_source_last_updated">Dokument lyste laas opgedateer: %s</string>
+  <string name="download_refreshing_book_list">Verfris lys beskikbare dokumente van dokument bedieners...</string>
+  <string name="download_source_message1">Dokumente word van die volgende bronne afgelaai:</string>
   <string name="download_document_confirm_prefix">Laai af</string>
   <string name="download_refresh_book_list_menu_item">Hernu</string>
+  <string name="error_downloading">\'n Fout het voorgekom terwyl dit afgelaai is. Kontroleer asseblief jou internetverbinding.</string>
+  <string name="error_downloading_status">Die bediener wat gasheer is %shet \'n fout teruggestuur as gevolg van %s (%d)</string>
   <string name="storage_space_warning">Onvoldoende lokale stoorplek.</string>
+  <string name="too_many_jobs">Te veel take loop. Wag asseblief dat sommige klaar is en probeer weer.</string>
   <string name="document_not_installed">Laai \'%s\' asseblief af</string>
   <string name="free_text_search_documents">Soek</string>
   <string name="chooce_language_hint">Taal</string>
+  <string name="one_more_back_press">Druk weer terug om die toep te sluit</string>
   <string name="document_filter_results">%ddocumente</string>
   <string name="download_question_title">Wil u voortgaan om dokumente af te laai?</string>
+  <string name="download_question_message">As u in \'n vervolgde land woon,
+moet jy miskien versigtig wees met die aflaai van Christelike materiaal via die internet.
+In plaas daarvan wil u miskien \'n zip-lêer van die module veiliger bekom en installeer
+via \"Laai dokumente vanaf zip\". Is jy seker dat jy wil voortgaan met die aflaai?
+Alle aflaaie vanaf module-bewaarplekke is ge-enkripteer (HTTPS).</string>
   <string name="do_not_ask_again">Ja, moenie meer vra nie</string>
   <string name="recommended_document">Aanbeveel!</string>
   <string name="about_version_history">Weergawe geskiedenis:%s</string>
   <string name="download_errors">Fout met aflaai</string>
+  <string name="failed_repositories_message">Kon nie met die volgende dokument bediener verbind nie: \n\n%s\n\n</string>
   <string name="failed_downloads_message">Die volgende lêers kon nie afgelaai word nie:\n\n%s\n\n</string>
   <!--Install zip file-->
   <string name="install_zip">Laai dokument van Zip </string>
@@ -197,9 +240,24 @@ Woordafbreking</string>
   <string name="rdg_plan_selector_title">Kies \'n lees plan</string>
   <string name="rdg_plan_day">Dag %s</string>
   <string name="rdg_plan_set_start_date">Stel die begin datum ...</string>
+  <string name="set_current_day">Stel as huidige dag... </string>
+  <string name="msg_set_current_day_reading_plan">Dit sal vandag as die huidige dag in hierdie plan stel en al die vorige dae as gelees merk. Gan voort?</string>
   <string name="done">Klaar</string>
-  <string name="reset">Herstel</string>
   <string name="reset_plan_question">Is u seker dat u hierdie plan wil terugstel?</string>
+  <string name="import_reading_plan">Voer leesplan in... </string>
+  <string name="import_reading_plan_error">Fout met invoer</string>
+  <string name="import_reading_plan_error_duplicate">Die volgende dae het \'n duplikaat: %s</string>
+  <string name="import_reading_plan_error_days">Die volgende dae bevat foute: %s</string>
+  <string name="import_reading_plan_anyway">Voer in elk geval in</string>
+  <string name="overwrite_reading_plan">Wil jy oorskryf %s?</string>
+  <string name="delete_reading_plan">Skrap hierdie plan</string>
+  <string name="reading_plan_deleted">Die leesplan is geskrap</string>
+  <string name="reading_plan_ships_with_ab">Hierdie leesplan word voorsien met %s</string>
+  <string name="confirm_delete_reading_plan">
+        Is jy seker dat jy will dit verwyder %s saam met sy lees geskiedenis?
+        Wenk: as jy die plan moet bywerk, kan jy dit net weer met dieselfde lêernaam invoer
+        en die geskiedenis sal bewaar word.
+    </string>
   <string name="plan_duplicate_user_plan">
 Daar is \'n gebruikers leesplan in sdcard
 jsword / leesplan met dieselfde naam as \'n interne plan. Dit kan nie hier gelys word nie.
@@ -246,6 +304,7 @@ Met vergunning van Wholesome Words, http://www.wholesomewords.org/, toestemming 
   <!--Verse context menu-->
   <string name="notes">Voetnotas en verwysings</string>
   <string name="share_verse">Deel...</string>
+  <string name="share_verse_widget_title">Deel seleksie</string>
   <string name="share_verse_subject_2">\'n Bybel vers is gedeel met wat jy gebruik %s.</string>
   <string name="compare_translations">Vergelyk vertalings</string>
   <!--Link context menu-->
@@ -253,12 +312,24 @@ Met vergunning van Wholesome Words, http://www.wholesomewords.org/, toestemming 
   <string name="open_link_in_new_window">Maak skakel oop in \'n nuwe venster</string>
   <string name="open_link_in_special_window">Maak skakel oop in spesiale venster</string>
   <!--Bookmarks-->
+  <string name="bookmarks_and_mynotes_title">Boekmerke &amp; My Notas</string>
+  <string name="migrated_my_notes">Migreer my notas</string>
   <string name="bookmarks">Boekmerke</string>
   <string name="bookmark_added">Boekmerk bygevoeg</string>
+  <string name="manage_labels">Bestuur Etikette</string>
   <string name="assign_labels">Ken etikette toe</string>
+  <string name="new_item">Nuut</string>
   <string name="new_label">Nuwe etiket</string>
   <string name="label_name_prompt">Naam</string>
   <string name="label_unlabelled">Die etiket is verwyder</string>
+  <string name="add_bookmark1">Boekmerke</string>
+  <string name="remove_bookmark">Verwyder</string>
+  <string name="bookmark_settings_hide_labels_title">Versteek gespesifiseerde etikette</string>
+  <string name="bookmark_settings_hide_labels_summary">Versteek boekmerke wat met gespesifiseerde etiket(e) gemerk is</string>
+  <string name="bookmark_settings_assign_labels_title">Ken etikette toe aan nuwe boekmerke</string>
+  <string name="bookmark_settings_assign_labels_summary">Ken etikette outomaties toe aan nuwe boekmerke</string>
+  <string name="label_color">Etiketteer kleur</string>
+  <string name="label_color_example">Voorbeeld</string>
   <!--Sort orders used for Bookmarks and MyNotes-->
   <string name="sort_by_date">Datum volgorde</string>
   <string name="sort_by_bible_book">Bybelse volgorde</string>
@@ -299,6 +370,7 @@ Met vergunning van Wholesome Words, http://www.wholesomewords.org/, toestemming 
   <string name="speak_advanced_settings">Gevorderde Instellings</string>
   <string name="speak_sleep_timer_title">Slaap tydhouer</string>
   <string name="speak_no_books_available">Geen boeke beskibaar om te praat</string>
+  <string name="speak_general_error">Spraak kon nie vir hierdie boek begin word nie</string>
   <string name="repeat_passage">Herhaal inleiding</string>
   <string name="set_repeat_passage_range">Stel herhaalde inleiding omvang</string>
   <string name="speak_beginning_of_passage">Kies begin van inlaiding</string>
@@ -370,7 +442,17 @@ praat buite die omskrewe versreeks begin het.</string>
   <!--User Notes-->
   <string name="mynotes">My Notas</string>
   <!--Backup and restore-->
+  <string name="backup_and_restore">Deel, rugsteun &amp;amp herstel data</string>
+  <string name="backup_modules">Deel of rugsteun dokumente na ...</string>
+  <string name="backup_app_database">Deel of rugsteun toep databasis na ...</string>
+  <string name="backup_app">Deel of rugsteun toep (.apk-lêer) na ...</string>
+  <string name="restore_app_database">Rugsteun toep databasis vanaf ...</string>
+  <string name="restore_database">Rugsteun databasis leer ...</string>
+  <string name="restore_confirmation">Herskryf My notas, boekmerke, studie blokkies, lees planne en werkruimtes?</string>
+  <string name="restore_success">My Notas, Boekmerke, Studie blokkies, Lees planne en Werkruimtes suksesvol herstel</string>
   <string name="loading_backup">Laai databasis vanaf rugsteun ...</string>
+  <string name="backup_success2">My Notas, Boekmerke, Studie Blokkies, Lees Planne en Werkruimtes is suksesvol gerugsteun.</string>
+  <string name="backup_modules_success">Geselekteerde modules is suksesvol gerugsteun.</string>
   <string name="backup_modules_email_subject_2">%s modules rugsteun</string>
   <string name="backup_modules_email_message_2">Aangeheg is jou %s rugsteun van modules, wat die volgende modules bevat:%s</string>
   <string name="backup_email_subject_2">%s databasis rugsteun</string>
@@ -390,8 +472,26 @@ praat buite die omskrewe versreeks begin het.</string>
   <string name="module_about_installed_version">Geïnstalleerde weergawe:%s(%s)</string>
   <string name="module_about_latest_version">Nuutste weergawe:%s (%s)</string>
   <string name="module_about_versification">Verifiëring:%s</string>
+  <string name="module_about_repository">Verspreidings bediener: %s</string>
   <string name="module_about_osisId">OSIS ID: %s</string>
   <!--Bug reporting-->
+  <string name="send_bug_report_title">Terugvoer / fout verslag</string>
+  <string name="report_bug_email_subject_3">[%s]Fout verslag vir %s %s</string>
+  <string name="report_bug_big_heading">HUUR SKRYF JOU TERUGVOER OF FOUTVERSLAG BO HIERDIE LYN</string>
+  <string name="report_bug_heading1">Instruksies:</string>
+  <string name="report_bug_line_1">Vertel ons kortliks wat het jy gedoen / wat gebeur het toe die kwessie plaasgevind het</string>
+  <string name="report_bug_heading2">Byvoorbeeld:</string>
+  <string name="report_bug_instructions1">1. Geopende toep</string>
+  <string name="report_bug_instructions2">2. Geklikte venster kieslys</string>
+  <string name="report_bug_instructions3">-&amp;gt: Ineenstorting</string>
+  <string name="report_bug_line_2">Soms is handmatig geneemde skermskoot ook voordelig in die oplossing van kwessies.</string>
+  <string name="report_bug_line_3">Gebruik hierdie funksie om aan te meld sodra u agterkom dat die probleem plaasvind.</string>
+  <string name="report_bug_line_4">Jy kan ook hierdie funksie gebruik nadat jy toep oopgemaak het, nadat ineenstorting plaasgevind het.</string>
+  <string name="report_bug_heading_3">Aanhegsels:</string>
+  <string name="bug_report_logcat">Log lêer wat deur hierdie toep vervaardig word. Dit bevat nie inligting oor enige ander toepassings nie.</string>
+  <string name="bug_report_screenshot">Skermskoot van toep wanneer ineenstorting plaas gevind het, of wanneer foutverslag geskep is.</string>
+  <string name="bug_report_attachment_line_1">Om hierdie lêers aangeheg te hê, help toep ontwikkelaars baie in die vasstelling van die gerapporteerde fout.</string>
+  <string name="report_bug_heading_4">Toestel inligting:</string>
   <!--Document types-->
   <string name="doc_type_all">Alle tipes</string>
   <string name="doc_type_bible">Bybel</string>
@@ -399,6 +499,7 @@ praat buite die omskrewe versreeks begin het.</string>
   <string name="doc_type_dictionary">Woordeboek</string>
   <string name="doc_type_book">Boek</string>
   <string name="doc_type_map">Kaart</string>
+  <string name="doc_type_addons">Byvoegsels</string>
   <!--Languages-->
   <string name="lang_default">Standaard</string>
   <!--General-->
@@ -407,19 +508,24 @@ praat buite die omskrewe versreeks begin het.</string>
   <string name="yes">Ja</string>
   <string name="no">Nee</string>
   <string name="error">Fout</string>
+  <string name="delete_generic">Verwyder</string>
   <string name="please_wait">Wag Asseblief...</string>
   <string name="all">Alles</string>
   <string name="edit">Wysig</string>
+  <string name="reset_generic">Herstel</string>
   <string name="watch_tutorial_video">Kyk tutoriaal video (Engels)</string>
   <string name="verse_not_found">Vers nie gevind</string>
   <!--Errors-->
   <string name="report_error">Stuur verslag</string>
   <string name="error_occurred">\'n Fout het ontstaan</string>
+  <string name="error_occurred_crash_last_time">Die vorige keer toe u die toepassing gebruik het, het dit ineengestort. Om ons te help om die fout reg te stel, sal ons dit waardeer as u \'n foutverslag vir ons stuur.</string>
   <string name="error_occurred_with_link">\'n Fout het voorgekom. %s</string>
   <string name="error_no_content">Geen inhoud vir geselekteerde vers</string>
   <string name="error_page_too_large">Bladsy te groot om gelaai te word</string>
   <string name="error_key_not_in_document">Nie gevind in dokument</string>
+  <string name="error_key_not_in_document2">%s is nie in dokument gevind nie %s.</string>
   <string name="empty_list">Geen items om te wys</string>
+  <string name="error_skip">Vermy</string>
   <!--Notifications-->
   <string name="notification_channel_tts_status">Teks na spraak</string>
   <string name="notification_channel_progress_status">Vordering status kennisgewing vir die aflaai van dokumente ens.</string>
@@ -461,10 +567,17 @@ Beta-gebruikers word aangemoedig om foute te rapporteer via Google Play of
   <string name="beta_notice_github">Github</string>
   <string name="beta_notice_dismiss">Los</string>
   <string name="beta_notice_dismiss_until_update">Los tot volgende opdatering</string>
+  <string name="stable_notice_title">Die aansoek is opgegradeer!</string>
+  <string name="upgrade_video_message">Sien asseblief video met nuwe kenmerke van hierdie vrystelling (%s)</string>
+  <string name="stable_notice_par1">Die nuwe weergawe %s s van %s is suksesvol geïnstalleer!</string>
   <!--History-->
   <string name="history_for">Geskiedenis (%s:Venster %d)</string>
   <!--Help-->
   <string name="help_nav_title">Navigasie</string>
+  <string name="help_nav_text">Gaan na die volgende of vorige hoofstuk deur die skerm met jou vinger te vee.
+ Dubbel druk  op Bybelteks om oor te skakel na die volledige skerm modus 
+ Verdeelte skerms (ook vensters genoem) het die lys knoppie in die regter boonste hoek,
+waarmee jy verskillende venster-spesifieke funksies kan gebruik en venster uitkyk en gedrag kan aanpas.</string>
   <string name="help_contextmenus_title">Konteks Kieslys</string>
   <string name="help_contextmenus_text">
 Lang druk, in oopgemaakte konteks lys of aksie modus in verskillende aansigte
@@ -472,6 +585,12 @@ Lang druk op die Bybel aansig om die aksie modus te open vir aksies wat die huid
 Lang druk lank op \'n dokument item in die lys aansig van Kies dokument of laai af om dokument- of inligtinginligting te verwyder.
 Lang druk lank op \'n boekmerk in boekmerke lyste om etikette by te voeg of om die boekmerk te verwyder.
 Lang druk die skakels om te kies of u dit in die huidige venster, nuwe venster of spesiale venster wil oopmaak.</string>
+  <string name="help_bookmarks_title">Boekmerke &amp; My Notas</string>
+  <string name="help_bookmarks_text">Boekmerke kan geskep word deur sommige teks te kies \"boekmerk\" vanaf
+die opspring kieslys. Jy kan jou persoonlike notas by die nuwe boekmerk voeg deur die nou te tik
+Uitgeligte teks in die Bybel beskouing. Daar is ook \'n spesiale dokument \'My Notes\' in kommentare wat u toelaat
+Om u notas in \'n aparte venster te sien.</string>
+  <string name="help_studypads_title">Bestudeer blokies</string>
   <string name="help_search_title">Soek</string>
   <string name="help_search_text">Soek teks kan spesiale karakters insluit soos *,?, AND, OR, NOT
 (sien \"Apache Lucene - Query Parser Syntax\" vir meer besonderhede)</string>
@@ -497,4 +616,8 @@ Lang druk op die Terug knoppie om toegang tot die geskiedenis lys te kry.
   <string name="something_with_parenthesis">%s (%s)</string>
   <string name="first_time_help_do_not_show_again">Ek verstaan</string>
   <string name="first_time_help_show_next_time">Wys volgende keer weer</string>
+  <!--1. parameter is current Webview version. 2. minimum version 3. app name 4. Google Play link that takes user to WebView entry in Google Play to upgrade it.-->
+  <!--parameters are actions (file a bug, send email)-->
+  <!--param is "please report maintainers"-->
+  <!--param is "please read what you can do"-->
 </resources>

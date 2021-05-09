@@ -197,13 +197,11 @@ export default {
       });
 
       const modalStyle = computed(() => {
-        const backgroundColor = Color(appSettings.nightMode ? config.colors.nightBackground: config.colors.dayBackground);
         return `
           --bottom-offset: ${appSettings.bottomOffset}px;
           --top-offset: ${calculatedConfig.value.topOffset}px;
           --font-size:${config.fontSize}px;
-          --font-family:${config.fontFamily};
-          --background-color: ${backgroundColor.hsl().string()}`
+          --font-family:${config.fontFamily};`
       });
 
       const topStyle = computed(() => {
@@ -338,12 +336,10 @@ a {
 }
 
 .modal-action-button {
-  font-size: 90%;
-  + .toggled {
-    background-color: #474747;
-    &.light {
-      background-color: #d5d5d5;
-    }
+  font-size: 120%;
+  line-height: 0.5em; // make sure this does not increase modal title height
+  &.toggled {
+    color: #d5d5d5;
   }
 
   &.right {
@@ -354,32 +350,6 @@ a {
   color: white;
   border-radius: 5pt;
   padding: 5pt 5pt;
-  margin: 2pt 2pt;
-  text-align: center;
-  text-decoration: none;
-  display: inline-block;
-}
-
-.button {
-  font-size: 90%;
-  background-color: #717171;
-  + .toggled {
-    background-color: #474747;
-    &.light {
-      background-color: #d5d5d5;
-    }
-  }
-  &.light {
-    background-color: #bdbdbd;
-    color: black;
-  }
-  &.right {
-    align-self: end;
-  }
-  border: none;
-  color: white;
-  padding: 5pt 5pt;
-  border-radius: 5pt;
   margin: 2pt 2pt;
   text-align: center;
   text-decoration: none;
