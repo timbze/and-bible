@@ -19,6 +19,7 @@
 package net.bible.android.view.activity.page
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Rect
@@ -94,6 +95,7 @@ import net.bible.android.database.json
 import net.bible.android.view.activity.base.DocumentView
 import net.bible.android.view.activity.base.SharedActivityState
 import net.bible.android.view.activity.bookmark.ManageLabels
+import net.bible.android.view.activity.bookmark.updateFrom
 import net.bible.android.view.activity.page.screen.AfterRemoveWebViewEvent
 import net.bible.android.view.activity.page.screen.PageTiltScroller
 import net.bible.android.view.activity.page.screen.RestoreButtonsVisibilityChanged
@@ -123,12 +125,13 @@ import java.util.*
 import kotlin.math.min
 
 class BibleViewInputFocusChanged(val view: BibleView, val newFocus: Boolean)
+class AppSettingsUpdated
 
 /** The WebView component that shows the bible and other documents */
 @SuppressLint("ViewConstructor")
 class BibleView(val mainBibleActivity: MainBibleActivity,
                 internal var windowRef: WeakReference<Window>,
-                private val windowControl: WindowControl,
+                val windowControl: WindowControl,
                 private val bibleKeyHandler: BibleKeyHandler,
                 private val pageControl: PageControl,
                 private val pageTiltScrollControl: PageTiltScrollControl,
@@ -204,6 +207,11 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
                 mode.finish()
                 return true
             }
+            R.id.add_bookmark_whole_verse -> {
+                makeBookmark(true)
+                mode.finish()
+                return true
+            }
             R.id.remove_bookmark -> {
                 val sel = currentSelection
                 if(sel?.bookmarks?.isNotEmpty() == true) {
@@ -226,7 +234,7 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
         }
     }
 
-    private fun makeBookmark() {
+    private fun makeBookmark(wholeVerse: Boolean = false) {
         val selection = currentSelection?: return
         Log.d(TAG, "makeBookmark")
         val book = Books.installed().getBook(selection.bookInitials)
@@ -238,9 +246,9 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
         val v11n = book.versification
         val verseRange = VerseRange(v11n, Verse(v11n, selection.startOrdinal), Verse(v11n, selection.endOrdinal))
         val textRange = BookmarkEntities.TextRange(selection.startOffset!!, selection.endOffset!!)
-        val bookmark = BookmarkEntities.Bookmark(verseRange, textRange, book)
-        val initialLabels = displaySettings.bookmarksAssignLabels!!.toList()
-        bookmark.primaryLabelId = initialLabels.firstOrNull()
+        val bookmark = BookmarkEntities.Bookmark(verseRange, textRange, wholeVerse, book)
+        val initialLabels = workspaceSettings.autoAssignLabels
+        bookmark.primaryLabelId = workspaceSettings.autoAssignPrimaryLabel
         bookmarkControl.addOrUpdateBookmark(bookmark, initialLabels)
     }
 
@@ -259,14 +267,20 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
 
     internal fun assignLabels(bookmarkId: Long) = GlobalScope.launch(Dispatchers.IO) {
         val bookmark = bookmarkControl.bookmarksByIds(listOf(bookmarkId)).first()
-        val labels = bookmarkControl.labelsForBookmark(bookmark).map { it.id }.toLongArray()
+        val labels = bookmarkControl.labelsForBookmark(bookmark).map { it.id }
         val intent = Intent(mainBibleActivity, ManageLabels::class.java)
-        intent.putExtra(BookmarkControl.LABEL_IDS_EXTRA, labels)
-        intent.putExtra("title", mainBibleActivity.getString(R.string.bookmark_settings_assign_labels_title))
+        intent.putExtra("data", ManageLabels.ManageLabelsData(
+            mode = ManageLabels.Mode.ASSIGN,
+            selectedLabels = labels.toMutableSet(),
+            bookmarkPrimaryLabel = bookmark.primaryLabelId
+        ).applyFrom(windowControl.windowRepository.workspaceSettings).toJSON())
         val result = mainBibleActivity.awaitIntent(intent)
-        val resultLabels = result?.resultData?.extras?.getLongArray(BookmarkControl.LABEL_IDS_EXTRA)?.toList()
-        if(resultLabels != null) {
-            bookmarkControl.setLabelsByIdForBookmark(bookmark, resultLabels.toList())
+
+        if(result?.resultCode == Activity.RESULT_OK) {
+            val resultData = ManageLabels.ManageLabelsData.fromJSON(result.resultData.getStringExtra("data")!!)
+            bookmark.primaryLabelId = resultData.bookmarkPrimaryLabel
+            bookmarkControl.addOrUpdateBookmark(bookmark, resultData.selectedLabels)
+            windowControl.windowRepository.workspaceSettings.updateFrom(resultData)
         }
     }
 
@@ -304,11 +318,13 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
             mode.menuInflater.inflate(R.menu.bibleview_selection, menu)
             // For some reason, these do not seem to be correct from XML, even though specified there
             menu.findItem(R.id.add_bookmark).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+            menu.findItem(R.id.add_bookmark_whole_verse).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             menu.findItem(R.id.remove_bookmark).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             menu.findItem(R.id.compare).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             menu.findItem(R.id.share_verses).setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
             if(currentSelection == null) {
                 menu.findItem(R.id.add_bookmark).isVisible = false
+                menu.findItem(R.id.add_bookmark_whole_verse).isVisible = false
                 menu.findItem(R.id.compare).isVisible = false
                 menu.findItem(R.id.share_verses).isVisible = false
             }
@@ -461,7 +477,7 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
                 // If errorBox is enabled, console logging is handled in js interface so we don't want anything
                 // from here anymore.
                 if (!showErrorBox) {
-                    Log.d(TAG, "bibleview-js: ${consoleMessage.messageLevel()} ${consoleMessage.sourceId()}:${consoleMessage.lineNumber()} ${consoleMessage.message()}")
+                    Log.d(TAG, "bibleview-js: ${consoleMessage.messageLevel()} ${consoleMessage.message()}")
                 }
                 return true
             }
@@ -772,19 +788,19 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
     suspend fun loadDocument(document: Document,
                              updateLocation: Boolean = false,
                              verse: Verse? = null,
-                             yOffsetRatio: Float? = null)
+                             anchorOrdinal: Int? = null)
     {
         val currentPage = window.pageManager.currentPage
         bookmarkLabels = bookmarkControl.allLabels
         initialVerse = verse
 
-        var jumpToYOffsetRatio = yOffsetRatio
+        initialAnchorOrdinal = anchorOrdinal
 
         if (lastUpdated == 0L || updateLocation) {
             if (listOf(DocumentCategory.BIBLE, DocumentCategory.MYNOTE).contains(currentPage.documentCategory)) {
                 initialVerse = KeyUtil.getVerse(window.pageManager.currentBibleVerse.verse)
             } else {
-                jumpToYOffsetRatio = currentPage.currentYOffsetRatio
+                initialAnchorOrdinal = currentPage.anchorOrdinal
             }
         }
 
@@ -795,7 +811,7 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
             addChapter(chapter)
         }
 
-        Log.d(TAG, "Show $initialVerse, $jumpToYOffsetRatio Window:$window, settings: topOffset:${topOffset}, \n actualSettings: ${displaySettings.toJson()}")
+        Log.d(TAG, "Show $initialVerse, $initialAnchorOrdinal Window:$window, settings: topOffset:${topOffset}, \n actualSettings: ${displaySettings.toJson()}")
         this.firstDocument = document
         synchronized(this) {
             latestDocumentStr = document.asJson
@@ -821,8 +837,10 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
         }
     }
 
+    private var initialAnchorOrdinal: Int? = null
     internal var initialVerse: Verse? = null
     private val displaySettings get() = window.pageManager.actualTextDisplaySettings
+    private val workspaceSettings get() = windowControl.windowRepository.workspaceSettings
 
     fun updateTextDisplaySettings(onAttach: Boolean = false) {
         Log.d(TAG, "updateTextDisplaySettings")
@@ -839,13 +857,19 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
     private val showErrorBox get() = if(CommonUtils.isBeta) CommonUtils.sharedPreferences.getBoolean("show_errorbox", false) else false
 
     private fun getUpdateConfigCommand(initial: Boolean): String {
+        val favouriteLabels = json.encodeToString(serializer(), workspaceSettings.favouriteLabels)
+        val recentLabels = json.encodeToString(serializer(), workspaceSettings.recentLabels.map { it.labelId })
         return """
                 bibleView.emit('set_config', {
                     config: ${displaySettings.toJson()}, 
-                    appSettings: {activeWindow: $isActive, nightMode: $nightMode, errorBox: $showErrorBox}, 
+                    appSettings: {activeWindow: $isActive, nightMode: $nightMode, errorBox: $showErrorBox, favouriteLabels: $favouriteLabels, recentLabels: $recentLabels}, 
                     initial: $initial
                     });
                 """.trimIndent()
+    }
+
+    fun onEvent(event: AppSettingsUpdated) {
+        updateConfig()
     }
 
     private fun updateConfig(initial: Boolean = false) {
@@ -882,7 +906,7 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
             bibleView.emit("add_documents", $documentStr);
             bibleView.emit("setup_content", {
                 jumpToOrdinal: ${initialVerse?.ordinal}, 
-                jumpToYOffsetRatio: null,
+                jumpToAnchor: ${initialAnchorOrdinal},
                 topOffset: $topOffset,
                 bottomOffset: $bottomOffset,
             });            
@@ -978,11 +1002,6 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
         pageTiltScroller.recalculateViewingPosition()
 
         return handled
-    }
-
-    override val currentPosition: Float get () {
-        // see http://stackoverflow.com/questions/1086283/getting-document-position-in-a-webview
-        return scrollY.toFloat() / contentHeight.toFloat()
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
@@ -1311,6 +1330,20 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
         if(latestDocumentStr != null && needsDocument) {
             replaceDocument()
         }
+    }
+
+    var modalOpen = false
+
+    private fun closeModal() {
+        executeJavascriptOnUiThread("bibleView.emit('close_modals')")
+    }
+
+    fun backButtonPressed(): Boolean {
+        if(modalOpen) {
+            closeModal()
+            return true;
+        }
+        return false
     }
 
     var onDestroy: (() -> Unit)? = null

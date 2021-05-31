@@ -44,7 +44,7 @@ import java.io.ObjectOutputStream
 
 import java.util.*
 
-const val DATABASE_VERSION = 48
+const val DATABASE_VERSION = 52
 
 class Converters {
     @TypeConverter
@@ -131,13 +131,37 @@ class Converters {
     }
 
     @TypeConverter
-    fun strToLongList(s: String?): List<Long>? {
+    fun strToList1(s: String?): List<Long>? {
         if(s == null) return null
         return json.decodeFromString(serializer(), s)
     }
 
     @TypeConverter
-    fun longListToStr(obj: List<Long>?): String? {
+    fun listToStr1(obj: List<Long>?): String? {
+        if(obj == null) return null
+        return json.encodeToString(serializer(), obj)
+    }
+
+    @TypeConverter
+    fun strToList2(s: String?): MutableList<WorkspaceEntities.RecentLabel> {
+        if(s == null) return mutableListOf()
+        return json.decodeFromString(serializer(), s)
+    }
+
+    @TypeConverter
+    fun listToStr2(obj: List<WorkspaceEntities.RecentLabel>?): String? {
+        if(obj == null) return null
+        return json.encodeToString(serializer(), obj)
+    }
+
+    @TypeConverter
+    fun strToLongSet(s: String?): MutableSet<Long> {
+        if(s == null) return mutableSetOf()
+        return json.decodeFromString(serializer(), s)
+    }
+
+    @TypeConverter
+    fun longSetToStr(obj: Set<Long>?): String? {
         if(obj == null) return null
         return json.encodeToString(serializer(), obj)
     }
@@ -166,7 +190,7 @@ abstract class AppDatabase: RoomDatabase() {
     abstract fun workspaceDao(): WorkspaceDao
     abstract fun bookmarkDao(): BookmarkDao
     abstract fun documentDao(): DocumentSearchDao
-    abstract fun documentBackupDao(): DocumentBackupDao
+    abstract fun swordDocumentInfoDao(): SwordDocumentInfoDao
 
     fun sync() { // Sync all data so far into database file
         val cur = openHelper.writableDatabase

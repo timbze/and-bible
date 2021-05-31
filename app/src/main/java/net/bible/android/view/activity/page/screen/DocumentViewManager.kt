@@ -28,7 +28,9 @@ import net.bible.android.control.page.window.Window
 import net.bible.android.control.page.window.WindowControl
 import net.bible.android.view.activity.MainBibleActivityScope
 import net.bible.android.view.activity.base.DocumentView
+import net.bible.android.view.activity.page.BibleView
 import net.bible.android.view.activity.page.MainBibleActivity
+import net.bible.android.view.activity.page.MainBibleActivity.Companion.mainBibleActivity
 import javax.inject.Inject
 
 class WebViewsBuiltEvent
@@ -46,7 +48,7 @@ class DocumentViewManager @Inject constructor(
 ) {
     private val parent: LinearLayout = mainBibleActivity.findViewById(R.id.mainBibleView)
     private var lastView: View? = null
-    private var splitBibleArea: SplitBibleArea? = null
+    var splitBibleArea: SplitBibleArea? = null
 
 	fun destroy() {
         ABEventBus.getDefault().unregister(this)
@@ -64,8 +66,9 @@ class DocumentViewManager @Inject constructor(
 		buildView()
 	}
 
-    private fun removeView() {
+    fun removeView() {
         parent.removeAllViews()
+        lastView = null
         ABEventBus.getDefault().post(AfterRemoveWebViewEvent())
     }
 
@@ -92,16 +95,11 @@ class DocumentViewManager @Inject constructor(
         ABEventBus.getDefault().post(WebViewsBuiltEvent())
     }
 
-    val documentView: DocumentView?
-        get() = getDocumentView(windowControl.activeWindow)
+    val documentView: BibleView get() = getDocumentView(windowControl.activeWindow)
 
-    private fun getDocumentView(window: Window): DocumentView? {
+    private fun getDocumentView(window: Window): BibleView {
         // a specific screen is specified to prevent content going to wrong screen if active screen is changed fast
-        return splitBibleArea?.bibleViewFactory?.getOrCreateBibleView(window)
-    }
-
-    fun clearBibleViewFactory() {
-        splitBibleArea!!.bibleViewFactory.clear()
+        return mainBibleActivity.bibleViewFactory.getOrCreateBibleView(window)
     }
 
     init {

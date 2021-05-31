@@ -68,12 +68,12 @@ import net.bible.android.control.event.ToastEvent
 import net.bible.android.control.event.apptobackground.AppToBackgroundEvent
 import net.bible.android.control.event.passage.CurrentVerseChangedEvent
 import net.bible.android.control.event.passage.PassageChangedEvent
-import net.bible.android.control.event.passage.PreBeforeCurrentPageChangeEvent
 import net.bible.android.control.event.passage.SynchronizeWindowsEvent
 import net.bible.android.control.event.window.CurrentWindowChangedEvent
 import net.bible.android.control.event.window.NumberOfWindowsChangedEvent
 import net.bible.android.control.navigation.NavigationControl
 import net.bible.android.control.page.DocumentCategory
+import net.bible.android.control.page.PageControl
 import net.bible.android.control.page.window.WindowControl
 import net.bible.android.control.report.ErrorReportControl
 import net.bible.android.control.search.SearchControl
@@ -148,6 +148,7 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
     @Inject lateinit var documentControl: DocumentControl
     @Inject lateinit var navigationControl: NavigationControl
     @Inject lateinit var bibleViewFactory: BibleViewFactory
+    @Inject lateinit var pageControl: PageControl
 
     private var navigationBarHeight = 0
     private var actionBarHeight = 0
@@ -159,7 +160,7 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
     private var transportBarVisible = false
 
     val dao get() = DatabaseContainer.db.workspaceDao()
-    val docDao get() = DatabaseContainer.db.documentBackupDao()
+    val docDao get() = DatabaseContainer.db.swordDocumentInfoDao()
 
     val multiWinMode
         get() =
@@ -187,11 +188,8 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
     private val restoreButtonsVisible get() = preferences.getBoolean("restoreButtonsVisible", false)
 
     private var isPaused = false
-    /**
-     * return percentage scrolled down page
-     */
-    private val currentPosition: Float
-        get() = documentViewManager.documentView?.currentPosition ?: 0F
+
+    val workspaceSettings: WorkspaceEntities.WorkspaceSettings get() = windowRepository.workspaceSettings
 
     /**
      * Called when the activity is first created.
@@ -221,10 +219,9 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
 
         // use context to setup backup control dirs
         BackupControl.setupDirs(this)
-        // When I mess up database, I can re-create database like this.
-        // backupControl.resetDatabase()
 
         backupControl.clearBackupDir()
+
         windowRepository.initialize()
 
         runOnUiThread {
@@ -460,7 +457,7 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
                     + "${getString(R.string.beta_notice_github)}</a>"
 
             )
-            val htmlMessage = "$videoMessageLink<br><br>$par1<br><br> $par2<br><br> $par3 <br><br> <i>Version: $verFull</i>"
+            val htmlMessage = "$videoMessageLink<br><br>$par1<br><br> $par2<br><br> $par3 <br><br> <i>${getString(R.string.version_text, verFull)}</i>"
 
             val spanned = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 Html.fromHtml(htmlMessage, Html.FROM_HTML_MODE_LEGACY)
@@ -544,7 +541,7 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
         if (binding.drawerLayout.isDrawerVisible(GravityCompat.START)) {
             binding.drawerLayout.closeDrawers()
         } else {
-            if (!historyTraversal.goBack()) {
+            if (!documentViewManager.documentView.backButtonPressed() && !historyTraversal.goBack()) {
                 if(lastBackPressed == null || lastBackPressed < System.currentTimeMillis() - 1000) {
                     this.lastBackPressed = System.currentTimeMillis()
                     Toast.makeText(this, getString(R.string.one_more_back_press), Toast.LENGTH_SHORT).show()
@@ -647,6 +644,8 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
     private var currentWorkspaceId
         get() = windowRepository.id
         set(value) {
+            documentViewManager.removeView()
+            bibleViewFactory.clear()
             windowRepository.loadFromDb(value)
 
             preferences.edit().putLong("current_workspace_id", windowRepository.id).apply()
@@ -668,6 +667,7 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
                 intent.putExtra("settingsBundle", settingsBundle.toJson())
                 startActivityForResult(intent, TEXT_DISPLAY_SETTINGS_CHANGED)
             }, opensDialog = true)
+            R.id.autoAssignLabels -> AutoAssignPreference(windowRepository.workspaceSettings)
             R.id.textOptionsSubMenu -> SubMenuPreference(false)
             R.id.textOptionItem -> getPrefItem(settingsBundle, CommonUtils.lastDisplaySettings[item.order])
             R.id.splitMode -> SplitModePreference()
@@ -1088,6 +1088,7 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
     }
 
     override fun onDestroy() {
+        documentViewManager.removeView()
         bibleViewFactory.clear()
         super.onDestroy()
         beforeDestroy()
@@ -1136,14 +1137,14 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
 
     override fun onScreenTurnedOff() {
         super.onScreenTurnedOff()
-        documentViewManager.documentView?.onScreenTurnedOff()
+        documentViewManager.documentView.onScreenTurnedOff()
     }
 
     override fun onScreenTurnedOn() {
         super.onScreenTurnedOn()
         ScreenSettings.refreshNightMode()
         refreshIfNightModeChange()
-        documentViewManager.documentView?.onScreenTurnedOn()
+        documentViewManager.documentView.onScreenTurnedOn()
     }
 
     var currentNightMode: Boolean = false
@@ -1235,7 +1236,8 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
                                 Log.d(TAG, "Restored database successfully")
                                 withContext(Dispatchers.Main) {
                                     bookmarkControl.reset()
-                                    documentViewManager.clearBibleViewFactory()
+                                    documentViewManager.removeView()
+                                    bibleViewFactory.clear()
                                     windowControl.windowSync.setResyncRequired()
                                     Dialogs.instance.showMsg(R.string.restore_success)
                                     currentWorkspaceId = 0
@@ -1421,15 +1423,6 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
         }
     }
 
-    /**
-     * allow current page to save any settings or data before being changed
-     */
-    fun onEvent(event: PreBeforeCurrentPageChangeEvent) {
-        val currentPage = windowControl.activeWindowPageManager.currentPage
-        // save current scroll position so history can return to correct place in document
-        currentPage.currentYOffsetRatio = currentPosition
-    }
-
     fun onEvent(event: CurrentWindowChangedEvent) {
         updateActions()
     }
@@ -1449,7 +1442,7 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
         super.onResume()
         isPaused = false
         // allow webView to start monitoring tilt by setting focus which causes tilt-scroll to resume
-        documentViewManager.documentView?.asView()?.requestFocus()
+        documentViewManager.documentView.asView().requestFocus()
     }
 
     /**
@@ -1477,7 +1470,7 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
      * user swiped right
      */
     operator fun next() {
-        if (documentViewManager.documentView!!.isPageNextOkay) {
+        if (documentViewManager.documentView.isPageNextOkay) {
             windowControl.activeWindowPageManager.currentPage.next()
         }
     }
@@ -1486,7 +1479,7 @@ class MainBibleActivity : CustomTitlebarActivityBase() {
      * user swiped left
      */
     fun previous() {
-        if (documentViewManager.documentView!!.isPagePreviousOkay) {
+        if (documentViewManager.documentView.isPagePreviousOkay) {
             windowControl.activeWindowPageManager.currentPage.previous()
         }
     }

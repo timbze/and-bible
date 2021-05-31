@@ -26,11 +26,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.serializer
+import net.bible.android.activity.R
 import net.bible.android.control.event.ABEventBus
 import net.bible.android.control.event.ToastEvent
 import net.bible.android.control.page.BibleDocument
 import net.bible.android.control.page.CurrentPageManager
 import net.bible.android.control.page.MyNotesDocument
+import net.bible.android.control.page.OsisDocument
 import net.bible.android.database.bookmarks.BookmarkEntities
 import net.bible.android.database.bookmarks.KJVA
 import net.bible.android.view.activity.page.MainBibleActivity.Companion.mainBibleActivity
@@ -56,6 +58,8 @@ class BibleJavascriptInterface(
                     is MyNotesDocument -> KJVA
                     else -> throw RuntimeException("Unsupported doc")
                 })
+        } else if(doc is OsisDocument) {
+            currentPageManager.currentPage.anchorOrdinal = verseOrdinal
         }
     }
 
@@ -179,8 +183,45 @@ class BibleJavascriptInterface(
 
     @JavascriptInterface
     fun setAsPrimaryLabel(bookmarkId: Long, labelId: Long) {
+        val label = bookmarkControl.labelById(labelId)!!
+        if(label.isUnlabeledLabel) {
+            return
+        }
         bookmarkControl.setAsPrimaryLabel(bookmarkId, labelId)
+        bibleView.windowControl.windowRepository.updateRecentLabels(listOf(labelId))
     }
 
-	private val TAG get() = "BibleView[${bibleView.windowRef.get()?.id}] JSInt"
+    @JavascriptInterface
+    fun toggleBookmarkLabel(bookmarkId: Long, labelId: Long) {
+        val bookmark = bookmarkControl.bookmarkById(bookmarkId)!!
+        val labels = bookmarkControl.labelsForBookmark(bookmark).toMutableList()
+        val foundLabel = labels.find { it.id == labelId }
+        if(foundLabel !== null) {
+            labels.remove(foundLabel)
+        } else {
+            labels.add(bookmarkControl.labelById(labelId)!!)
+        }
+        bookmarkControl.setLabelsForBookmark(bookmark, labels)
+        bibleView.windowControl.windowRepository.updateRecentLabels(listOf(labelId))
+    }
+
+    @JavascriptInterface
+    fun reportModalState(value: Boolean) {
+        bibleView.modalOpen = value
+    }
+
+    @JavascriptInterface
+    fun setBookmarkWholeVerse(bookmarkId: Long, value: Boolean) {
+        val bookmark = bookmarkControl.bookmarkById(bookmarkId)!!
+        if(!value && bookmark.textRange == null) {
+            ABEventBus.getDefault().post(ToastEvent(R.string.cant_change_wholeverse))
+            return
+        }
+        bookmark.wholeVerse = value
+
+        bookmarkControl.addOrUpdateBookmark(bookmark)
+        if(value) ABEventBus.getDefault().post(ToastEvent(R.string.whole_verse_turned_on))
+    }
+
+    private val TAG get() = "BibleView[${bibleView.windowRef.get()?.id}] JSInt"
 }

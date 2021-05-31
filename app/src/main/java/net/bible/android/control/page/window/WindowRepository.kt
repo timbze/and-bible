@@ -32,6 +32,8 @@ import net.bible.service.db.DatabaseContainer
 import net.bible.android.database.WorkspaceEntities
 import net.bible.android.database.bookmarks.SpeakSettings
 import net.bible.android.view.activity.base.SharedActivityState
+import net.bible.android.view.activity.bookmark.ManageLabels
+import net.bible.android.view.activity.page.AppSettingsUpdated
 import net.bible.android.view.activity.page.MainBibleActivity.Companion.mainBibleActivity
 import net.bible.service.common.CommonUtils.getResourceString
 import net.bible.service.history.HistoryManager
@@ -47,7 +49,7 @@ class DecrementBusyCount
 open class WindowRepository @Inject constructor(
         // Each window has its own currentPageManagerProvider to store the different state e.g.
         // different current Bible module, so must create new cpm for each window
-    val currentPageManagerProvider: Provider<CurrentPageManager>,
+    private val currentPageManagerProvider: Provider<CurrentPageManager>,
     private val historyManagerProvider: Provider<HistoryManager>,
 )
 {
@@ -62,7 +64,7 @@ open class WindowRepository @Inject constructor(
             }
         }
     var textDisplaySettings = WorkspaceEntities.TextDisplaySettings.default
-    var windowBehaviorSettings = WorkspaceEntities.WindowBehaviorSettings.default
+    var workspaceSettings = WorkspaceEntities.WorkspaceSettings.default
     var maximizedWindowId: Long? = null
 
     val isMaximized get() = maximizedWindowId != null
@@ -102,14 +104,19 @@ open class WindowRepository @Inject constructor(
 
     fun initialize() {
         if(initialized) return
+        var firstTime = false
         if(id == 0L) {
             id = sharedPreferences.getLong("current_workspace_id", 0)
             if (id == 0L || dao.workspace(id) == null) {
                 id = dao.insertWorkspace(WorkspaceEntities.Workspace(getResourceString(R.string.workspace_number, 1)))
                 sharedPreferences.edit().putLong("current_workspace_id", id).apply()
+                firstTime = true
             }
         }
         loadFromDb(id)
+        if(firstTime) {
+            activeWindow.pageManager.setFirstUseDefaultVerse()
+        }
     }
 
     private var _activeWindow: Window? = null
@@ -292,7 +299,7 @@ open class WindowRepository @Inject constructor(
      */
     fun onEvent(appToBackgroundEvent: AppToBackgroundEvent) {
         if (appToBackgroundEvent.isMovedToBackground) {
-            saveIntoDb()
+            saveIntoDb(false)
         }
     }
 
@@ -311,17 +318,17 @@ open class WindowRepository @Inject constructor(
         return keyTitle.joinToString(", ")
     }
 
-    fun saveIntoDb() {
+    fun saveIntoDb(stopSpeak: Boolean = true) {
         Log.d(TAG, "saveIntoDb")
-        mainBibleActivity.speakControl.stop()
-        windowBehaviorSettings.speakSettings = SpeakSettings.currentSettings
+        if(stopSpeak) mainBibleActivity.speakControl.stop()
+        workspaceSettings.speakSettings = SpeakSettings.currentSettings
         dao.updateWorkspace(WorkspaceEntities.Workspace(
             name = name,
             contentsText = contentText,
             id = id,
             orderNumber = orderNumber,
             textDisplaySettings = textDisplaySettings,
-            windowBehaviorSettings = windowBehaviorSettings,
+            workspaceSettings = workspaceSettings,
             unPinnedWeight = unPinnedWeight,
             maximizedWindowId = maximizedWindowId
         ))
@@ -339,13 +346,7 @@ open class WindowRepository @Inject constructor(
             }
         }
 
-        val pageManagers = allWindows.map {
-            val currentPosition = it.bibleView?.currentPosition
-            if(currentPosition != null) {
-                it.pageManager.currentPage.currentYOffsetRatio = currentPosition
-            }
-            it.pageManager.entity
-        }
+        val pageManagers = allWindows.map { it.pageManager.entity }
 
         dao.updateWindows(windowEntities)
         dao.updatePageManagers(pageManagers)
@@ -366,8 +367,8 @@ open class WindowRepository @Inject constructor(
         maximizedWindowId = entity.maximizedWindowId
 
         textDisplaySettings = entity.textDisplaySettings?: WorkspaceEntities.TextDisplaySettings.default
-        windowBehaviorSettings = entity.windowBehaviorSettings?: WorkspaceEntities.WindowBehaviorSettings.default
-        SpeakSettings.currentSettings = windowBehaviorSettings.speakSettings
+        workspaceSettings = entity.workspaceSettings?: WorkspaceEntities.WorkspaceSettings.default
+        SpeakSettings.currentSettings = workspaceSettings.speakSettings
 
         val linksWindowEntity = dao.linksWindow(id) ?: WorkspaceEntities.Window(
             id,
@@ -435,6 +436,22 @@ open class WindowRepository @Inject constructor(
         for (it in windows) {
             it.bibleView?.updateTextDisplaySettings()
         }
+    }
+
+    fun updateRecentLabels(labelIds: List<Long>) {
+        for(labelId in labelIds) {
+            val existingLabel = workspaceSettings.recentLabels.find { it.labelId == labelId }
+            if (existingLabel != null) {
+                existingLabel.lastAccess = System.currentTimeMillis()
+                workspaceSettings.recentLabels.sortBy { it.lastAccess }
+            } else {
+                workspaceSettings.recentLabels.add(WorkspaceEntities.RecentLabel(labelId, System.currentTimeMillis()))
+                while (workspaceSettings.recentLabels.size > 5) {
+                    workspaceSettings.recentLabels.removeAt(0)
+                }
+            }
+        }
+        ABEventBus.getDefault().post(AppSettingsUpdated())
     }
 
     companion object {

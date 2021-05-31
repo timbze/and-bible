@@ -170,7 +170,7 @@ object CommonUtils {
     val isFirstInstall get() = packageInfo.firstInstallTime == packageInfo.lastUpdateTime
 
     val isSplitVertically: Boolean get() {
-        val reverse = mainBibleActivity.windowRepository.windowBehaviorSettings.enableReverseSplitMode
+        val reverse = mainBibleActivity.windowRepository.workspaceSettings.enableReverseSplitMode
         return if(reverse) !isPortrait else isPortrait
     }
 
@@ -509,7 +509,7 @@ object CommonUtils {
         sharedPreferences.edit().putString("lastDisplaySettings", LastTypesSerializer(lastTypes).toJson()).apply()
     }
 
-    private val docDao get() = DatabaseContainer.db.documentBackupDao()
+    private val docDao get() = DatabaseContainer.db.swordDocumentInfoDao()
 
     suspend fun unlockDocument(context: Context, book: Book): Boolean {
         class ShowAgain: Exception()

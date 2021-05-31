@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /*
  * Copyright (c) 2020 Martin Denham, Tuomas Airaksinen and the And Bible contributors.
  *
@@ -186,6 +187,10 @@ export function useAndroid({bookmarks}, config) {
         android.assignLabels(bookmarkId);
     }
 
+    function toggleBookmarkLabel(bookmarkId, labelId) {
+        android.toggleBookmarkLabel(bookmarkId, labelId);
+    }
+
     function setClientReady() {
         android.setClientReady();
     }
@@ -253,6 +258,12 @@ export function useAndroid({bookmarks}, config) {
     function setAsPrimaryLabel(bookmarkId, labelId) {
         android.setAsPrimaryLabel(bookmarkId, labelId);
     }
+    function setBookmarkWholeVerse(bookmarkId, value) {
+        android.setBookmarkWholeVerse(bookmarkId, value);
+    }
+    function reportModalState(value) {
+        android.reportModalState(value)
+    }
 
     const exposed = {
         setActionMode,
@@ -275,6 +286,9 @@ export function useAndroid({bookmarks}, config) {
         shareBookmarkVerse,
         openStudyPad,
         setAsPrimaryLabel,
+        toggleBookmarkLabel,
+        reportModalState,
+        setBookmarkWholeVerse,
     }
 
     if(config.developmentMode) return {

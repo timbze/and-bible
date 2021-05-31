@@ -23,7 +23,7 @@
     </div>
     <template #title>
       <template v-if="isFootNote">
-        {{ sprintf(strings.noteText, typeStr) }}
+        {{ noteType }}
 
       </template>
       <template v-else-if="isCrossReference">
@@ -35,8 +35,8 @@
     </template>
   </Modal>
   <span
-      v-if="(config.showFootNotes && isCrossReference) || (config.showFootNotes && isFootNote) || isOther"
-      class="skip-offset">
+    v-if="(config.showFootNotes && isCrossReference) || (config.showFootNotes && isFootNote) || isOther"
+    class="skip-offset">
     <span :class="{noteHandle: true, isFootNote, isCrossReference, isOther}" @click="noteClicked">
       {{handle}}
     </span>
@@ -74,7 +74,8 @@ export default {
   computed: {
     handle: ({n}) => n || runningHandle(),
     isFootNote: ({type}) => ["explanation", "translation", "study", "variant", "alternative", "x-editor-correction"].includes(type),
-    typeStr: ({type, typeStrings, strings}) => get(typeStrings, type, strings.footnoteTypeUndefined),
+    typeStr: ({type, typeStrings}) => get(typeStrings, type),
+    noteType: ({typeStr, sprintf, strings}) => typeStr ? sprintf(strings.noteText, typeStr) : strings.noteTextWithoutType,
     isCrossReference: ({type}) => type === "crossReference",
     isOther: ({isCrossReference, isFootNote}) => !isCrossReference && !isFootNote
   },
@@ -83,20 +84,20 @@ export default {
     checkUnsupportedProps(props, "resp");
     checkUnsupportedProps(props, "placement", ['foot']);
     checkUnsupportedProps(props, "type",
-        ["explanation", "translation", "crossReference", "variant", "alternative", "study", "x-editor-correction"]);
+                          ["explanation", "translation", "crossReference", "variant", "alternative", "study", "x-editor-correction"]);
     checkUnsupportedProps(props, "subType",
-        ["x-gender-neutral", 'x-original', 'x-variant-adds', 'x-bondservant']);
+                          ["x-gender-neutral", 'x-original', 'x-variant-adds', 'x-bondservant']);
     const {strings, ...common} = useCommon();
     const showNote = ref(false);
     function noteClicked(event) {
       addEventFunction(event,
-          () => {
-            if(!showNote.value) {
-              referenceCollector.clear();
-              showNote.value = true;
-            }
-          },
-          {title: strings.openFootnote, priority: 10});
+                       () => {
+                         if(!showNote.value) {
+                           referenceCollector.clear();
+                           showNote.value = true;
+                         }
+                       },
+                       {title: strings.openFootnote, priority: 10});
     }
     const typeStrings = {
       explanation: strings.footnoteTypeExplanation,

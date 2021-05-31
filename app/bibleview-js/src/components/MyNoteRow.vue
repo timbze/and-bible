@@ -37,14 +37,14 @@
   </div>
   <div>
     <b><a :href="bookmark.bibleUrl">{{ bookmark.verseRangeOnlyNumber }}</a></b>&nbsp;
-    <LabelList v-if="expanded" :bookmark-id="bookmark.id"/>
+    <LabelList v-if="expanded" in-bookmark :bookmark-id="bookmark.id"/>
     <BookmarkText :bookmark="bookmark" :expanded="expanded" @change-expanded="expanded = $event"/>&nbsp;
-    <LabelList v-if="!expanded" :bookmark-id="bookmark.id"/>
+    <LabelList v-if="!expanded" in-bookmark :bookmark-id="bookmark.id"/>
     <div class="notes">
       <EditableText
-          ref="editor"
-          :text="bookmark.notes"
-          @save="save"
+        ref="editor"
+        :text="bookmark.notes"
+        @save="save"
       />
     </div>
   </div>

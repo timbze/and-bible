@@ -16,15 +16,17 @@
   -->
 
 <template>
-  <AmbiguousSelection blocking ref="ambiguousSelection"/>
+  <BookmarkLabelActions :bookmark-id="bookmarkId" ref="actions"/>
+
   <div class="label-list">
     <div
-        @touchstart="labelClicked($event, label)"
-        @click="labelClicked($event, label)"
-        v-for="label in labels"
-        :key="label.id"
-        :style="labelStyle(label)"
-        class="label"
+      @touchstart="labelClicked($event, label)"
+      @click="labelClicked($event, label)"
+      v-for="label in labels"
+      :key="label.id"
+      :style="labelStyle(label)"
+      class="label"
+      :class="{notAssigned: !isAssigned(label.id)}"
     >
       <span v-if="isPrimary(label)" class="icon"><FontAwesomeIcon icon="bookmark"/></span>
       {{label.name}}
@@ -36,32 +38,70 @@
 import {useCommon} from "@/composables";
 import {inject} from "@vue/runtime-core";
 import {computed, ref} from "@vue/reactivity";
-import {addEventFunction} from "@/utils";
+import {addAll, Deferred} from "@/utils";
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
+import {sortBy} from "lodash";
 
 export default {
   props: {
     bookmarkId: {type: Number, required: true},
     handleTouch: {type: Boolean, default: false},
     disableLinks: {type: Boolean, default: false},
+    favourites: {type: Boolean, default: false},
+    frequent: {type: Boolean, default: false},
+    recent: {type: Boolean, default: false},
+    specific: {type: Array, default: null},
+    inBookmark: {type: Boolean, default: false},
+    onlyAssign: {type: Boolean, default: false},
   },
   components: {FontAwesomeIcon},
   name: "LabelList",
   setup(props) {
-    const {adjustedColor, strings, ...common} = useCommon();
-    const ambiguousSelection = ref(null);
+    const {adjustedColor, ...common} = useCommon();
+    const appSettings = inject("appSettings");
+    const android = inject("android");
+    const actions = ref(null);
+
     function labelStyle(label) {
-      return "background-color: " + adjustedColor(label.color).string() + ";";
+      const color = adjustedColor(label.color).string();
+      if (isAssigned(label.id)) {
+        return `background-color: ${color};`;
+      } else {
+        return `border-color: ${color};`;
+      }
     }
 
     const {bookmarkMap, bookmarkLabels} = inject("globalBookmarks");
     const bookmark = computed(() => bookmarkMap.get(props.bookmarkId));
 
-    const labels = computed(() => {
-      return bookmark.value.labels.map(labelId => bookmarkLabels.get(labelId));
-    });
+    function isAssigned(labelId) {
+      return bookmark.value.labels.includes(labelId);
+    }
 
-    const android = inject("android");
+    function isPrimary(label) {
+      return label.id === bookmark.value.primaryLabelId;
+    }
+
+    const labels = computed(() => {
+      const shown = new Set();
+      if(props.inBookmark) {
+        addAll(shown, ...bookmark.value.labels);
+      }
+      if(props.favourites) {
+        addAll(shown, ...appSettings.favouriteLabels);
+      }
+      if(props.recent) {
+        addAll(shown, ...appSettings.recentLabels);
+      }
+      if(props.specific) {
+        addAll(shown, ...props.specific);
+      }
+      if(props.frequent) {
+        addAll(shown, ...appSettings.frequentLabels);
+      }
+      // TODO: add frequent
+      return sortBy(Array.from(shown).map(labelId => bookmarkLabels.get(labelId)).filter(v => v), ["name"]);
+    });
 
     function assignLabels() {
       if(bookmark.value) {
@@ -69,32 +109,48 @@ export default {
       }
     }
 
-    function labelClicked(event, label) {
+    let clickDeferred = null;
+
+    async function labelClicked(event, label) {
       if(props.disableLinks) return;
       if(event.type === "touchstart" && !props.handleTouch) {
         return;
       }
-      if(event.type === "click" && props.handleTouch) {
-        return
-      }
       event.stopPropagation();
-      addEventFunction(event, assignLabels, {title: strings.assignLabelsMenuEntry})
-      if(label.isRealLabel) {
-        addEventFunction(event, () => {
-          window.location.assign(`journal://?id=${label.id}`);
-        }, {title: strings.jumpToStudyPad});
-        if(bookmark.value.primaryLabelId !== label.id) {
-          addEventFunction(event, () => {
-            android.setAsPrimaryLabel(bookmark.value.id, label.id);
-          }, {title: strings.setAsPrimaryLabel});
+
+      if(props.handleTouch) {
+        if(event.type === "click") {
+          if (clickDeferred) {
+            clickDeferred.resolve();
+            clickDeferred = null;
+          } else {
+            console.error("Deferred not found");
+          }
+          return
+        }
+        else if(event.type === "touchstart") {
+          clickDeferred = new Deferred();
+          await clickDeferred.wait();
         }
       }
-      ambiguousSelection.value.handle(event);
+
+      if(!isAssigned(label.id)) {
+        android.toggleBookmarkLabel(bookmark.value.id, label.id);
+      } else if(!props.onlyAssign) {
+        actions.value.showActions()
+      } else {
+        if(isAssigned(label.id) && !isPrimary(label)) {
+          android.setAsPrimaryLabel(bookmark.value.id, label.id);
+        } else {
+          android.toggleBookmarkLabel(bookmark.value.id, label.id);
+        }
+      }
     }
-    function isPrimary(label) {
-      return label.id === bookmark.value.primaryLabelId;
+
+    return {
+      labelStyle, assignLabels, actions, labelClicked, labels, isPrimary,
+      isAssigned, ...common
     }
-    return {labelStyle, assignLabels, ambiguousSelection, labelClicked, labels, isPrimary, ...common}
   }
 }
 </script>
@@ -115,16 +171,20 @@ export default {
   padding-left: 4pt;
   padding-right: 4pt;
   margin-right: 2pt;
+  border-width: 2px;
+  border-style: solid;
+  background-color: rgba(0, 0, 0, 0.2);
+  .night & {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+  &.notAssigned {
+    border-style: solid;
+  }
+  border-color: rgba(0, 0, 0, 0);
 }
 .label-list {
   line-height: 1em;
   display: inline-flex;
-//  @extend .superscript;
-//  font-size: 100%;
-//  line-height: 1.1em;
-//  display: inline-flex;
-//  flex-direction: row;
-//  bottom: 30pt;
-//  padding: 2pt 2pt 0 0;
+  flex-wrap: wrap;
 }
 </style>

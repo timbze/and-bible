@@ -57,8 +57,6 @@ import net.bible.android.control.event.window.CurrentWindowChangedEvent
 import net.bible.android.control.page.window.Window
 import net.bible.android.control.page.window.WindowControl
 import net.bible.android.database.SettingsBundle
-import net.bible.android.view.activity.MainBibleActivityModule
-import net.bible.android.view.activity.DaggerMainBibleActivityComponent
 import net.bible.android.view.activity.page.BibleView
 import net.bible.android.view.activity.page.BibleViewFactory
 import net.bible.android.view.activity.page.BibleViewInputFocusChanged
@@ -77,7 +75,6 @@ import net.bible.service.device.ScreenSettings
 import org.crosswire.jsword.versification.BookName
 import java.lang.IndexOutOfBoundsException
 import java.util.*
-import javax.inject.Inject
 import kotlin.collections.ArrayList
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -102,11 +99,9 @@ class LockableHorizontalScrollView(context: Context, attributeSet: AttributeSet)
 class RestoreButtonsVisibilityChanged
 
 @SuppressLint("ViewConstructor")
-class SplitBibleArea(
-): FrameLayout(mainBibleActivity) {
-
-    @Inject lateinit var windowControl: WindowControl
-    @Inject lateinit var bibleViewFactory: BibleViewFactory
+class SplitBibleArea: FrameLayout(mainBibleActivity) {
+    private val windowControl: WindowControl get() = mainBibleActivity.windowControl
+    private val bibleViewFactory: BibleViewFactory get() = mainBibleActivity.bibleViewFactory
 
     private val res = BibleApplication.application.resources
 
@@ -138,12 +133,6 @@ class SplitBibleArea(
     )
 
     init {
-        DaggerMainBibleActivityComponent.builder()
-            .applicationComponent(BibleApplication.application.applicationComponent)
-            .mainBibleActivityModule(MainBibleActivityModule(mainBibleActivity))
-            .build()
-            .inject(this)
-
         binding.hideRestoreButton.setOnClickListener {
             restoreButtonsVisible = !restoreButtonsVisible
             updateRestoreButtons()
@@ -157,6 +146,7 @@ class SplitBibleArea(
     private val windowRepository = windowControl.windowRepository
 
     fun destroy() {
+        removeAllViews()
         ABEventBus.getDefault().unregister(this)
         bibleViewFactory.clear()
     }
@@ -796,7 +786,7 @@ class SplitBibleArea(
             R.id.pinMode -> CommandPreference(
                 handle = {windowControl.setPinMode(window, !window.isPinMode)},
                 value = window.isPinMode,
-                visible = !window.isLinksWindow && !isMaximised && !windowRepository.windowBehaviorSettings.autoPin
+                visible = !window.isLinksWindow && !isMaximised && !windowRepository.workspaceSettings.autoPin
             )
             R.id.moveWindowSubMenu -> SubMenuPreference(false,
                 visible = !window.isLinksWindow && !isMaximised && windowControl.hasMoveItems(window)

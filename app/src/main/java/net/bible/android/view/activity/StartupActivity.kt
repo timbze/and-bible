@@ -35,7 +35,6 @@ import android.widget.TextView
 import androidx.webkit.WebViewCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
@@ -44,7 +43,6 @@ import kotlin.coroutines.suspendCoroutine
 import net.bible.android.BibleApplication
 import net.bible.android.SharedConstants
 import net.bible.android.activity.R
-import net.bible.android.activity.databinding.MainBibleViewBinding
 import net.bible.android.activity.databinding.SpinnerBinding
 import net.bible.android.activity.databinding.StartupViewBinding
 import net.bible.android.control.backup.BackupControl
@@ -61,8 +59,10 @@ import net.bible.android.view.activity.page.MainBibleActivity
 import net.bible.android.view.util.Hourglass
 import net.bible.service.common.CommonUtils
 import net.bible.service.db.DatabaseContainer
+import net.bible.service.sword.SwordEnvironmentInitialisation
 
 import org.apache.commons.lang3.StringUtils
+import org.crosswire.jsword.book.Books
 
 import javax.inject.Inject
 
@@ -77,7 +77,7 @@ open class StartupActivity : CustomTitlebarActivityBase() {
     private lateinit var spinnerBinding: SpinnerBinding
     private lateinit var startupViewBinding: StartupViewBinding
 
-    val docs get() = DatabaseContainer.db.documentBackupDao()
+    val docs get() = DatabaseContainer.db.swordDocumentInfoDao()
     private val previousInstallDetected: Boolean get() = docs.getKnownInstalled().isNotEmpty();
 
 
@@ -207,6 +207,7 @@ open class StartupActivity : CustomTitlebarActivityBase() {
         spinnerBinding.progressText.text = oldText
     }
 
+    private val docDao get() = DatabaseContainer.db.swordDocumentInfoDao()
 
     private suspend fun postBasicInitialisationControl() = withContext(Dispatchers.Main) {
         if(!checkWebView()) return@withContext
@@ -217,7 +218,17 @@ open class StartupActivity : CustomTitlebarActivityBase() {
             showFirstLayout()
         } else {
             Log.i(TAG, "Going to main bible view")
+
+            // When I mess up database, I can re-create database like this.
+            // backupControl.resetDatabase()
+
             initializeDatabase()
+
+            docDao.getUnlocked().forEach {
+                val book = Books.installed().getBook(it.initials)
+                book.unlock(it.cipherKey)
+            }
+
             gotoMainBibleActivity()
             spinnerBinding.progressText.text =getString(R.string.initializing_app)
         }
@@ -301,7 +312,6 @@ open class StartupActivity : CustomTitlebarActivityBase() {
                 }
             }
 
-            pageControl.setFirstUseDefaultVerse()
             startActivity(handlerIntent)
             finish()
         }

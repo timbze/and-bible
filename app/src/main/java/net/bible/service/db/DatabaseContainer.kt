@@ -845,7 +845,48 @@ private val MIGRATION_46_47_primaryLabel = object : Migration(46, 47) {
     }
 }
 
-private val MIGRATION_47_48_readingPlanImport = object : Migration(47, 48) {
+private val MIGRATION_47_48_autoAssignLabels = object : Migration(47, 48) {
+    override fun doMigrate(db: SupportSQLiteDatabase) {
+        db.apply {
+            execSQL("ALTER TABLE `Workspace` ADD COLUMN `window_behavior_settings_favouriteLabels` TEXT DEFAULT NULL")
+            execSQL("ALTER TABLE `Workspace` ADD COLUMN `window_behavior_settings_autoAssignLabels` TEXT DEFAULT NULL")
+            execSQL("ALTER TABLE `Workspace` ADD COLUMN `window_behavior_settings_autoAssignPrimaryLabel` INTEGER DEFAULT NULL")
+        }
+    }
+}
+
+private val MIGRATION_48_49_anchorOrdinal = object : Migration(48, 49) {
+    override fun doMigrate(db: SupportSQLiteDatabase) {
+        db.apply {
+            execSQL("ALTER TABLE `PageManager` ADD COLUMN `commentary_anchorOrdinal` INTEGER DEFAULT NULL")
+            execSQL("ALTER TABLE `PageManager` ADD COLUMN `dictionary_anchorOrdinal` INTEGER DEFAULT NULL")
+            execSQL("ALTER TABLE `PageManager` ADD COLUMN `general_book_anchorOrdinal` INTEGER DEFAULT NULL")
+            execSQL("ALTER TABLE `PageManager` ADD COLUMN `map_anchorOrdinal` INTEGER DEFAULT NULL")
+            execSQL("ALTER TABLE `HistoryItem` ADD COLUMN `anchorOrdinal` INTEGER DEFAULT NULL")
+        }
+    }
+}
+
+private val MIGRATION_49_50_wholeVerseBookmark = object : Migration(49, 50) {
+    override fun doMigrate(db: SupportSQLiteDatabase) {
+        db.apply {
+            execSQL("ALTER TABLE `Bookmark` ADD COLUMN `wholeVerse` INTEGER NOT NULL DEFAULT 0")
+            execSQL("UPDATE `Bookmark` SET wholeVerse = startOffset IS NULL")
+        }
+    }
+}
+
+private val MIGRATION_50_51_underlineStyleAndRecentLabels = object : Migration(50, 51) {
+    override fun doMigrate(db: SupportSQLiteDatabase) {
+        db.apply {
+            execSQL("ALTER TABLE `Label` ADD COLUMN `underlineStyle` INTEGER NOT NULL DEFAULT 0")
+            execSQL("ALTER TABLE `Label` ADD COLUMN `underlineStyleWholeVerse` INTEGER NOT NULL DEFAULT 0")
+            execSQL("ALTER TABLE `Workspace` ADD COLUMN `window_behavior_settings_recentLabels` TEXT DEFAULT NULL")
+        }
+    }
+}
+
+private val MIGRATION_51_52_readingPlanImport = object : Migration(47, 48) {
     override fun doMigrate(db: SupportSQLiteDatabase) {
         db.apply {
             execSQL("ALTER TABLE readingplan RENAME TO readingplanold")
@@ -928,7 +969,11 @@ object DatabaseContainer {
                         MIGRATION_44_45_nullColors,
                         MIGRATION_45_46_workspaceSpeakSettings,
                         MIGRATION_46_47_primaryLabel,
-                        MIGRATION_47_48_readingPlanImport,
+                        MIGRATION_47_48_autoAssignLabels,
+                        MIGRATION_48_49_anchorOrdinal,
+                        MIGRATION_49_50_wholeVerseBookmark,
+                        MIGRATION_50_51_underlineStyleAndRecentLabels,
+                        MIGRATION_51_52_readingPlanImport,
                         /** When adding new migrations, remember to increment [DATABASE_VERSION] too */
                     )
                     .build()

@@ -190,10 +190,10 @@ class ClientBookmark(val bookmark: BookmarkEntities.Bookmark, val v11n: Versific
         "id" to bookmark.id.toString(),
         "ordinalRange" to json.encodeToString(serializer(), listOf(bookmark.verseRange.toV11n(v11n).start.ordinal, bookmark.verseRange.toV11n(v11n).end.ordinal)),
         "originalOrdinalRange" to json.encodeToString(serializer(), listOf(bookmark.verseRange.start.ordinal, bookmark.verseRange.end.ordinal)),
-        "offsetRange" to json.encodeToString(serializer(), bookmark.textRange?.clientList),
+        "offsetRange" to json.encodeToString(serializer(), if(bookmark.wholeVerse) null else bookmark.textRange?.clientList),
         "labels" to json.encodeToString(serializer(), bookmark.labelIds!!.toMutableList().also {
             if(it.isEmpty()) it.add(bookmarkControl.labelUnlabelled.id)
-        }.sortedBy { bookmark.primaryLabelId != it }),
+        }),
         "bookInitials" to wrapString(bookmark.book?.initials),
         "bookName" to wrapString(bookmark.book?.name),
         "bookAbbreviation" to wrapString(bookmark.book?.abbreviation),
@@ -210,6 +210,7 @@ class ClientBookmark(val bookmark: BookmarkEntities.Bookmark, val v11n: Versific
         "osisFragment" to mapToJson(bookmark.osisFragment?.toHashMap),
         "type" to wrapString("bookmark"),
         "primaryLabelId" to bookmark.primaryLabelId.toString(),
+        "wholeVerse" to bookmark.wholeVerse.toString(),
     )
 
     companion object{
@@ -222,7 +223,8 @@ class ClientBookmark(val bookmark: BookmarkEntities.Bookmark, val v11n: Versific
 }
 
 @Serializable
-data class ClientBookmarkStyle(val color: Int, val icon: String?, val noHighlight: Boolean)
+data class ClientBookmarkStyle(val color: Int, val icon: String?, val noHighlight: Boolean,
+                               val underline: Boolean, val underlineWholeVerse: Boolean)
 
 @Serializable
 data class ClientBookmarkLabel(
@@ -234,7 +236,10 @@ data class ClientBookmarkLabel(
     constructor(label: BookmarkEntities.Label): this(
         label.id,
         label.displayName,
-        ClientBookmarkStyle(label.color, if(label.isSpeakLabel) "headphones" else null, label.isSpeakLabel),
+        ClientBookmarkStyle(
+            label.color, if(label.isSpeakLabel) "headphones" else null, label.isSpeakLabel,
+            label.underlineStyle, label.underlineStyleWholeVerse
+        ),
         !label.isUnlabeledLabel && !label.isSpeakLabel && label.id > 0
     )
 }

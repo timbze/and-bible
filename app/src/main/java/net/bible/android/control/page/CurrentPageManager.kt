@@ -18,15 +18,14 @@
 
 package net.bible.android.control.page
 
-import android.content.Intent
 import android.util.Log
 
-import net.bible.android.SharedConstants
 import net.bible.android.control.PassageChangeMediator
 import net.bible.android.control.bookmark.BookmarkControl
 import net.bible.android.control.page.window.Window
 import net.bible.android.control.page.window.WindowRepository
 import net.bible.android.control.versification.BibleTraverser
+import net.bible.android.control.versification.Scripture
 import net.bible.android.view.activity.base.CurrentActivityHolder
 import net.bible.android.database.WorkspaceEntities
 import net.bible.service.sword.SwordContentFacade
@@ -37,6 +36,8 @@ import org.crosswire.jsword.book.BookCategory
 import org.crosswire.jsword.book.FeatureType
 import org.crosswire.jsword.book.basic.AbstractPassageBook
 import org.crosswire.jsword.passage.Key
+import org.crosswire.jsword.passage.Verse
+import org.crosswire.jsword.versification.BibleBook
 import java.lang.IllegalArgumentException
 import java.lang.RuntimeException
 
@@ -70,7 +71,7 @@ val BookCategory.documentCategory: DocumentCategory get() {
 
 open class CurrentPageManager @Inject constructor(
         swordContentFacade: SwordContentFacade,
-        swordDocumentFacade: SwordDocumentFacade,
+        val swordDocumentFacade: SwordDocumentFacade,
         bibleTraverser: BibleTraverser,
         val bookmarkControl: BookmarkControl,
         val windowRepository: WindowRepository,
@@ -179,7 +180,7 @@ open class CurrentPageManager @Inject constructor(
     fun setCurrentDocumentAndKey(currentBook: Book?,
                                  key: Key,
                                  updateHistory: Boolean = true,
-                                 yOffsetRatio: Float = SharedConstants.NO_VALUE.toFloat()
+                                 anchorOrdinal: Int? = null
     ): CurrentPage? {
         PassageChangeMediator.getInstance().onBeforeCurrentPageChanged(updateHistory)
 
@@ -189,7 +190,7 @@ open class CurrentPageManager @Inject constructor(
                 nextPage.isInhibitChangeNotifications = true
                 nextPage.setCurrentDocument(currentBook)
                 nextPage.setKey(key)
-                nextPage.currentYOffsetRatio = yOffsetRatio
+                nextPage.anchorOrdinal = anchorOrdinal
                 currentPage = nextPage
             } finally {
                 nextPage.isInhibitChangeNotifications = false
@@ -268,6 +269,46 @@ open class CurrentPageManager @Inject constructor(
             currentPage = currentBible
         }
     }
+
+    /** This is only called after the very first bible download to attempt to ensure the first page is not 'Verse not found'
+     * go through a list of default verses until one is found in the first/only book installed
+     */
+    fun setFirstUseDefaultVerse() {
+        try {
+            val versification = currentBible.versification
+            val defaultVerses = arrayOf(
+                Verse(versification, BibleBook.JOHN, 3, 16),
+                Verse(versification, BibleBook.GEN, 1, 1),
+                Verse(versification, BibleBook.PS, 1, 1))
+            val bibles = swordDocumentFacade.bibles
+            if (bibles.size == 1) {
+                val bible = bibles[0]
+                for (verse in defaultVerses) {
+                    if (bible.contains(verse)) {
+                        currentBible.doSetKey(verse)
+                        return
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Verse error")
+        }
+    }
+
+    /**
+     * Return false if current page is not scripture, but only if the page is valid
+     */
+    val isCurrentPageScripture: Boolean
+        get() {
+            val currentVersePage = currentVersePage
+            val currentVersification = currentVersePage.versification
+            val currentBibleBook = currentVersePage.currentBibleVerse.currentBibleBook
+            val isCurrentBibleBookScripture = Scripture.isScripture(currentBibleBook)
+            // Non-scriptural pages are not so safe.  They may be synched with the other screen but not support the current dc book
+            return isCurrentBibleBookScripture ||
+                !currentVersification.containsBook(currentBibleBook)
+        }
+
 
     val TAG get() = "PageManager[${window.id}]"
 }

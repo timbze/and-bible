@@ -43,7 +43,8 @@ class WorkspaceEntities {
     data class Page(
         val document: String?,
         val key: String?,
-        val currentYOffsetRatio: Float?
+        @ColumnInfo(defaultValue = "NULL") val anchorOrdinal: Int?,
+        @ColumnInfo(name = "currentYOffsetRatio") val deprecatedCurrentYOffsetRatio: Float? = null, // TODO: remove
     )
 
     data class Verse(
@@ -68,7 +69,8 @@ class WorkspaceEntities {
 
     data class CommentaryPage(
         val document: String?,
-        val currentYOffsetRatio: Float?
+        @ColumnInfo(defaultValue = "NULL") val anchorOrdinal: Int?,
+        @ColumnInfo(name = "currentYOffsetRatio") val deprecatedCurrentYOffsetRatio: Float? = null // TODO: remove
     )
 
     @Entity(
@@ -92,7 +94,8 @@ class WorkspaceEntities {
         @Embedded(prefix="general_book_") val generalBookPage: Page?,
         @Embedded(prefix="map_") val mapPage: Page?,
         val currentCategoryName: String,
-        @Embedded(prefix="text_display_settings_") val textDisplaySettings: TextDisplaySettings?
+        @Embedded(prefix="text_display_settings_") val textDisplaySettings: TextDisplaySettings?,
+        @ColumnInfo(defaultValue = "NULL", name = "text_display_settings_bookmarks_assignLabels") var deprecatedBookmarksAssignLabels: List<Long>? = null,
     )
 
     data class WindowLayout(
@@ -147,7 +150,6 @@ class WorkspaceEntities {
         @ColumnInfo(defaultValue = "NULL") var lineSpacing: Int? = null,
         @ColumnInfo(defaultValue = "NULL", name = "bookmarks_showAll") var deprecatedBookmarksShowAllLabels: Boolean? = null,
         @ColumnInfo(defaultValue = "NULL", name = "bookmarks_showLabels") var bookmarksHideLabels: List<Long>? = null,
-        @ColumnInfo(defaultValue = "NULL", name = "bookmarks_assignLabels") var bookmarksAssignLabels: List<Long>? = null,
     ) {
         enum class Types {
             FONTSIZE,
@@ -167,7 +169,6 @@ class WorkspaceEntities {
             VERSEPERLINE,
             BOOKMARKS_SHOW,
             BOOKMARKS_HIDELABELS,
-            BOOKMARKS_ASSINGNLABELS,
             MYNOTES,
         }
 
@@ -190,7 +191,6 @@ class WorkspaceEntities {
             Types.FONTFAMILY -> fontFamily
             Types.BOOKMARKS_SHOW -> showBookmarks
             Types.BOOKMARKS_HIDELABELS -> bookmarksHideLabels
-            Types.BOOKMARKS_ASSINGNLABELS -> bookmarksAssignLabels
         }
 
         fun setValue(type: Types, value: Any?) {
@@ -213,7 +213,6 @@ class WorkspaceEntities {
                 Types.LINE_SPACING -> lineSpacing = value as Int?
                 Types.BOOKMARKS_SHOW -> showBookmarks = value as Boolean?
                 Types.BOOKMARKS_HIDELABELS -> bookmarksHideLabels = value as List<Long>?
-                Types.BOOKMARKS_ASSINGNLABELS -> bookmarksAssignLabels = value as List<Long>?
             }
         }
 
@@ -268,7 +267,6 @@ class WorkspaceEntities {
                 lineSpacing = 16,
                 showBookmarks = true,
                 bookmarksHideLabels = emptyList(),
-                bookmarksAssignLabels = emptyList(),
             )
 
             fun actual(pageManagerEntity: PageManager?, workspaceEntity: Workspace?): TextDisplaySettings {
@@ -303,14 +301,22 @@ class WorkspaceEntities {
         }
     }
 
-    data class WindowBehaviorSettings(
+    @Serializable
+    data class RecentLabel(val labelId: Long, var lastAccess: Long)
+
+    data class WorkspaceSettings(
         @ColumnInfo(defaultValue = "0") var enableTiltToScroll: Boolean = false,
         @ColumnInfo(defaultValue = "0") var enableReverseSplitMode: Boolean = false,
         @ColumnInfo(defaultValue = "1") var autoPin: Boolean = false,
         @ColumnInfo(defaultValue = "NULL") var speakSettings: SpeakSettings? = null,
+
+        @ColumnInfo(defaultValue = "NULL") var recentLabels: MutableList<RecentLabel> = mutableListOf(),
+        @ColumnInfo(defaultValue = "NULL") var favouriteLabels: MutableSet<Long> = mutableSetOf(),
+        @ColumnInfo(defaultValue = "NULL") var autoAssignLabels: MutableSet<Long> = mutableSetOf(),
+        @ColumnInfo(defaultValue = "NULL") var autoAssignPrimaryLabel: Long? = null,
     ) {
         companion object {
-            val default get() = WindowBehaviorSettings(
+            val default get() = WorkspaceSettings(
                 enableTiltToScroll = false,
                 enableReverseSplitMode = false,
                 autoPin = true
@@ -327,9 +333,13 @@ class WorkspaceEntities {
         @ColumnInfo(defaultValue = "0") var orderNumber: Int = 0,
 
         @Embedded(prefix="text_display_settings_") var textDisplaySettings: TextDisplaySettings? = TextDisplaySettings(),
-        @Embedded(prefix="window_behavior_settings_") val windowBehaviorSettings: WindowBehaviorSettings? = WindowBehaviorSettings(),
+
+        // TODO: change prefix to correspond variable name
+        @Embedded(prefix="window_behavior_settings_") val workspaceSettings: WorkspaceSettings? = WorkspaceSettings(),
         @ColumnInfo(defaultValue = "NULL") var unPinnedWeight: Float? = null,
-        val maximizedWindowId: Long? = null
+        val maximizedWindowId: Long? = null,
+
+        @ColumnInfo(defaultValue = "NULL", name = "text_display_settings_bookmarks_assignLabels") var deprecatedBookmarksAssignLabels: List<Long>? = null,
     )
 
     @Entity(
@@ -350,7 +360,8 @@ class WorkspaceEntities {
         val createdAt: Date,
         val document: String,
         val key: String,
-        val yOffsetRatio: Float?,
+        @ColumnInfo(defaultValue = "NULL") val anchorOrdinal: Int?,
+        @ColumnInfo(name = "yOffsetRatio") val deprecatedYOffsetRatio: Float? = null, // TODO: remove (deprecated)
 
         @PrimaryKey(autoGenerate = true) val id: Long = 0
     )

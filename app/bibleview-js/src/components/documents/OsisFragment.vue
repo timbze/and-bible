@@ -42,7 +42,8 @@ export default {
     fragment: {type: Object, required: true},
     highlightOrdinalRange: {type: Array, default: null},
     highlightOffsetRange: {type: Array, default: null},
-    hideTitles: {type: Boolean, default: false}
+    hideTitles: {type: Boolean, default: false},
+    doNotConvert: {type: Boolean, default: false},
   },
   components: {OsisSegment},
   setup(props) {
@@ -80,7 +81,7 @@ export default {
       }
     });
 
-    const template = osisToTemplateString(xml)
+    const template = !props.doNotConvert ? osisToTemplateString(xml): xml;
     const templates = reactive([]);
 
     async function populate() {
@@ -96,6 +97,7 @@ export default {
       fragmentReady.value = true;
     }
     // TODO: leaving this now for a later point. Need to re-design replace_osis + setup_content for this too.
+    // eslint-disable-next-line no-constant-condition
     if(false && props.showTransition) {
       populate();
     } else {

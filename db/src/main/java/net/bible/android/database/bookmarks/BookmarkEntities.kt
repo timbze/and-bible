@@ -127,8 +127,9 @@ class BookmarkEntities {
 
         @ColumnInfo(defaultValue = "NULL") var notes: String? = null,
         @ColumnInfo(defaultValue = "0") var lastUpdatedOn: Date = Date(System.currentTimeMillis()),
+        @ColumnInfo(defaultValue = "0") var wholeVerse: Boolean = false,
         ): VerseRangeUser {
-        constructor(verseRange: VerseRange, textRange: TextRange? = null,  book: AbstractPassageBook? = null): this(
+        constructor(verseRange: VerseRange, textRange: TextRange?, wholeVerse: Boolean, book: AbstractPassageBook?): this(
             verseRange.toV11n(KJVA).start.ordinal,
             verseRange.toV11n(KJVA).end.ordinal,
             verseRange.start.ordinal,
@@ -138,20 +139,22 @@ class BookmarkEntities {
             book = book,
             startOffset = textRange?.start,
             endOffset = textRange?.end,
+            wholeVerse = wholeVerse,
         )
 
-        constructor(id: Long, createdAt: Date, verseRange: VerseRange, textRange: TextRange?, book: AbstractPassageBook?, playbackSettings: PlaybackSettings?): this(
-            verseRange.toV11n(KJVA).start.ordinal,
-            verseRange.toV11n(KJVA).end.ordinal,
-            verseRange.start.ordinal,
-            verseRange.end.ordinal,
-            verseRange.versification,
-            playbackSettings,
-            id,
-            createdAt,
-            book,
-            textRange?.start,
-            textRange?.end,
+        constructor(id: Long, createdAt: Date, verseRange: VerseRange, textRange: TextRange?, wholeVerse: Boolean, book: AbstractPassageBook?, playbackSettings: PlaybackSettings?): this(
+            kjvOrdinalStart = verseRange.toV11n(KJVA).start.ordinal,
+            kjvOrdinalEnd = verseRange.toV11n(KJVA).end.ordinal,
+            ordinalStart = verseRange.start.ordinal,
+            ordinalEnd = verseRange.end.ordinal,
+            v11n = verseRange.versification,
+            playbackSettings = playbackSettings,
+            id = id,
+            createdAt = createdAt,
+            book = book,
+            startOffset = textRange?.start,
+            endOffset = textRange?.end,
+            wholeVerse = wholeVerse,
         )
 
         var textRange: TextRange?
@@ -260,7 +263,9 @@ class BookmarkEntities {
         @PrimaryKey(autoGenerate = true) var id: Long = 0,
         var name: String = "",
         @ColumnInfo(name = "bookmarkStyle") var bookmarkStyleDeprecated: BookmarkStyle? = null,
-        @ColumnInfo(defaultValue = "0") var color: Int = defaultLabelColor
+        @ColumnInfo(defaultValue = "0") var color: Int = defaultLabelColor,
+        @ColumnInfo(defaultValue = "0") var underlineStyle: Boolean = false,
+        @ColumnInfo(defaultValue = "0") var underlineStyleWholeVerse: Boolean = false,
     ) {
         override fun toString() = name
         val isSpeakLabel get() = name == SPEAK_LABEL_NAME

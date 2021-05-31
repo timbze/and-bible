@@ -35,7 +35,6 @@ import net.bible.android.database.bookmarks.PlaybackSettings
 import net.bible.android.database.bookmarks.SPEAK_LABEL_NAME
 import net.bible.android.database.bookmarks.UNLABELED_NAME
 import net.bible.android.misc.OsisFragment
-import net.bible.service.common.CommonUtils
 import net.bible.service.db.DatabaseContainer
 import net.bible.service.sword.OsisError
 import net.bible.service.sword.SwordContentFacade
@@ -99,7 +98,7 @@ open class BookmarkControl @Inject constructor(
 
     fun allBookmarksWithNotes(orderBy: BookmarkSortOrder): List<Bookmark> = dao.allBookmarksWithNotes(orderBy)
 
-    fun addOrUpdateBookmark(bookmark: Bookmark, labels: List<Long>?=null): Bookmark {
+    fun addOrUpdateBookmark(bookmark: Bookmark, labels: Set<Long>?=null): Bookmark {
         if(bookmark.id != 0L) {
             dao.update(bookmark)
         } else {
@@ -114,6 +113,7 @@ open class BookmarkControl @Inject constructor(
                 bookmark.primaryLabelId = filteredLabels.firstOrNull()?.labelId
                 dao.update(bookmark)
             }
+            windowControl.windowRepository.updateRecentLabels(labels.toList())
         }
 
         addText(bookmark)
@@ -169,6 +169,9 @@ open class BookmarkControl @Inject constructor(
         dao.deleteLabels(bookmark)
         val filteredLabels = labelIdList.filter { it > 0 }.map { BookmarkToLabel(bookmark.id, it, orderNumber = dao.countJournalEntities(it)) }
         dao.insert(filteredLabels)
+        @Suppress("UNNECESSARY_SAFE_CALL") // Leaving for tests
+        windowControl.windowRepository?.updateRecentLabels(filteredLabels.map { it.labelId })
+
         if(filteredLabels.find { it.labelId == bookmark.primaryLabelId } == null) {
             bookmark.primaryLabelId = filteredLabels.firstOrNull()?.labelId
             dao.update(bookmark)
@@ -210,18 +213,12 @@ open class BookmarkControl @Inject constructor(
     private var _speakLabel: Label? = null
     val speakLabel: Label get() {
         return _speakLabel
-            ?: dao.labelById(CommonUtils.sharedPreferences.getLong("speak_label_id", -1))
-                ?.also {
-                    _speakLabel = it
-                }
             ?: dao.speakLabelByName()
                 ?.also {
-                    CommonUtils.sharedPreferences.edit().putLong("speak_label_id", it.id).apply()
                     _speakLabel = it
                 }
             ?: Label(name = SPEAK_LABEL_NAME, color = 0).apply {
                 id = dao.insert(this)
-                CommonUtils.sharedPreferences.edit().putLong("speak_label_id", id).apply()
                 _speakLabel = this
             }
     }
@@ -229,18 +226,12 @@ open class BookmarkControl @Inject constructor(
     private var _unlabeledLabel: Label? = null
     val labelUnlabelled: Label get() {
         return _unlabeledLabel
-            ?: dao.labelById(CommonUtils.sharedPreferences.getLong("unlabeled_label_id", -1))
-                ?.also {
-                    _unlabeledLabel = it
-                }
             ?: dao.unlabeledLabelByName()
                 ?.also {
-                    CommonUtils.sharedPreferences.edit().putLong("unlabeled_label_id", it.id).apply()
                     _unlabeledLabel = it
                 }
             ?: Label(name = UNLABELED_NAME, color = BookmarkStyle.BLUE_HIGHLIGHT.backgroundColor).apply {
                 id = dao.insert(this)
-                CommonUtils.sharedPreferences.edit().putLong("unlabeled_label_id", id).apply()
                 _unlabeledLabel = this
             }
     }
@@ -446,6 +437,9 @@ open class BookmarkControl @Inject constructor(
 
     companion object {
         const val LABEL_IDS_EXTRA = "bookmarkLabelIds"
+        const val FAVOURITE_LABEL_IDS = "favouriteLabelIds"
+        const val PRIMARY_LABEL_EXTRA = "primaryLabelExtra"
+
         const val LABEL_NO_EXTRA = "labelNo"
         private const val TAG = "BookmarkControl"
     }

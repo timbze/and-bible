@@ -25,7 +25,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import net.bible.android.activity.R
-import net.bible.android.control.bookmark.BookmarkControl
 import net.bible.android.control.event.ABEventBus
 import net.bible.android.control.page.PageTiltScrollControl
 import net.bible.android.database.SettingsBundle
@@ -33,6 +32,7 @@ import net.bible.android.database.WorkspaceEntities
 import net.bible.android.database.WorkspaceEntities.TextDisplaySettings
 import net.bible.android.view.activity.base.ActivityBase
 import net.bible.android.view.activity.bookmark.ManageLabels
+import net.bible.android.view.activity.bookmark.updateFrom
 import net.bible.android.view.activity.page.MainBibleActivity.Companion.COLORS_CHANGED
 import net.bible.android.view.activity.page.MainBibleActivity.Companion.mainBibleActivity
 import net.bible.android.view.activity.settings.ColorSettingsActivity
@@ -190,7 +190,6 @@ open class Preference(val settings: SettingsBundle,
                 TextDisplaySettings.Types.MARGINSIZE -> R.string.prefs_margin_size_title
                 TextDisplaySettings.Types.LINE_SPACING -> R.string.line_spacing_title
                 TextDisplaySettings.Types.BOOKMARKS_SHOW -> R.string.prefs_show_bookmarks_title
-                TextDisplaySettings.Types.BOOKMARKS_ASSINGNLABELS -> R.string.assign_labels
                 TextDisplaySettings.Types.BOOKMARKS_HIDELABELS -> R.string.bookmark_settings_hide_labels_title
             }
             return mainBibleActivity.getString(id)
@@ -199,7 +198,7 @@ open class Preference(val settings: SettingsBundle,
 
 class TiltToScrollPreference:
     GeneralPreference() {
-    private val wsBehaviorSettings = mainBibleActivity.windowRepository.windowBehaviorSettings
+    private val wsBehaviorSettings = mainBibleActivity.windowRepository.workspaceSettings
     override fun handle() = mainBibleActivity.invalidateOptionsMenu()
     override var value: Any
         get() = wsBehaviorSettings.enableTiltToScroll
@@ -349,26 +348,55 @@ class ColorPreference(settings: SettingsBundle): Preference(settings, TextDispla
     }
 }
 
-class LabelsPreference(settings: SettingsBundle, type: TextDisplaySettings.Types): Preference(settings, type) {
+class HideLabelsPreference(settings: SettingsBundle, type: TextDisplaySettings.Types): Preference(settings, type) {
     override fun openDialog(activity: ActivityBase, onChanged: ((value: Any) -> Unit)?, onReset: (() -> Unit)?): Boolean {
         val intent = Intent(activity, ManageLabels::class.java)
-        val originalValues = (value as List<Long>).toLongArray()
-        intent.putExtra(BookmarkControl.LABEL_IDS_EXTRA, originalValues)
-        intent.putExtra("resetButton", true)
-        intent.putExtra("title", title)
-        if(type === TextDisplaySettings.Types.BOOKMARKS_HIDELABELS) {
-            intent.putExtra("showUnassigned", true)
-        }
+        val originalValues = value as List<Long>
+
+        intent.putExtra("data", ManageLabels.ManageLabelsData(
+            mode = ManageLabels.Mode.HIDELABELS,
+            selectedLabels = originalValues.toMutableSet(),
+        ).applyFrom(mainBibleActivity.workspaceSettings).toJSON())
         GlobalScope.launch (Dispatchers.Main) {
             val result = activity.awaitIntent(intent)
-            val labels = result?.resultData?.extras?.getLongArray(BookmarkControl.LABEL_IDS_EXTRA)?.toList()
-            if(labels != null) {
-                value = labels
-                value
-                onChanged?.invoke(labels)
-            } else if(result?.resultData?.extras?.getBoolean("reset") == true) {
-                setNonSpecific()
-                onReset?.invoke()
+            if(result?.resultCode == Activity.RESULT_OK) {
+                val resultData = ManageLabels.ManageLabelsData.fromJSON(result.resultData.getStringExtra("data")!!)
+                if(resultData.reset) {
+                    setNonSpecific()
+                    onReset?.invoke()
+                } else {
+                    value = resultData.selectedLabels.toList()
+                    mainBibleActivity.workspaceSettings.updateFrom(resultData)
+                    onChanged?.invoke(value)
+                }
+            }
+        }
+        return true
+    }
+}
+
+class AutoAssignPreference(val workspaceSettings: WorkspaceEntities.WorkspaceSettings): GeneralPreference() {
+    override val isBoolean = false
+    override fun openDialog(activity: ActivityBase, onChanged: ((value: Any) -> Unit)?, onReset: (() -> Unit)?): Boolean {
+        val intent = Intent(activity, ManageLabels::class.java)
+
+        intent.putExtra("data",
+            ManageLabels.ManageLabelsData(mode = ManageLabels.Mode.WORKSPACE).applyFrom(workspaceSettings).toJSON()
+        )
+
+        GlobalScope.launch (Dispatchers.Main) {
+            val result = activity.awaitIntent(intent)
+            if(result?.resultCode == Activity.RESULT_OK) {
+                val resultData = ManageLabels.ManageLabelsData.fromJSON(result.resultData.getStringExtra("data")!!)
+                if (resultData.reset) {
+                    workspaceSettings.autoAssignLabels = mutableSetOf()
+                    workspaceSettings.favouriteLabels = mutableSetOf()
+                    workspaceSettings.autoAssignPrimaryLabel = null
+                    onReset?.invoke()
+                } else {
+                    workspaceSettings.updateFrom(resultData)
+                    onChanged?.invoke(1)
+                }
             }
         }
         return true
@@ -400,7 +428,7 @@ class MarginSizePreference(settings: SettingsBundle): Preference(settings, TextD
 
 class SplitModePreference :
     GeneralPreference() {
-    private val wsBehaviorSettings = mainBibleActivity.windowRepository.windowBehaviorSettings
+    private val wsBehaviorSettings = mainBibleActivity.windowRepository.workspaceSettings
     override fun handle() {
         mainBibleActivity.windowControl.windowSizesChanged()
         ABEventBus.getDefault().post(MainBibleActivity.ConfigurationChanged(mainBibleActivity.resources.configuration))
@@ -418,7 +446,7 @@ class SplitModePreference :
 
 class WindowPinningPreference :
     GeneralPreference() {
-    private val wsBehaviorSettings = mainBibleActivity.windowRepository.windowBehaviorSettings
+    private val wsBehaviorSettings = mainBibleActivity.windowRepository.workspaceSettings
     override var value: Any
         get() = !wsBehaviorSettings.autoPin
         set(value) {

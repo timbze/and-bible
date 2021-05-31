@@ -20,6 +20,7 @@ import {
     inject,
     nextTick,
     onBeforeMount,
+    onMounted,
     onUnmounted,
     reactive,
     ref,
@@ -35,19 +36,18 @@ import {
     faBookmark,
     faEdit,
     faEllipsisH,
-    faFileAlt,
-    faHeadphones,
+    faFileAlt, faFireAlt,
+    faHeadphones, faHeart, faHistory,
     faIndent,
     faInfoCircle,
     faOutdent,
     faPlusCircle,
     faShareAlt,
     faSort,
-    faTags,
+    faTags, faTextWidth,
     faTimes,
     faTrash
 } from "@fortawesome/free-solid-svg-icons";
-import Color from "color";
 import {DocumentTypes} from "@/constants";
 
 let developmentMode = false;
@@ -185,6 +185,9 @@ export function useConfig(documentType) {
         bottomOffset: 100,
         nightMode: false,
         errorBox: false,
+        favouriteLabels: [],
+        recentLabels: [],
+        frequentLabels: [],
         activeWindow: false,
         rightToLeft: rtl
     });
@@ -216,7 +219,7 @@ export function useConfig(documentType) {
         appSettings.activeWindow = newActive;
     });
 
-    setupEventBusListener(Events.SET_CONFIG, async function setConfig({config: c, appSettings: {activeWindow, nightMode, errorBox: errorBoxVal}, initial = false} = {}) {
+    setupEventBusListener(Events.SET_CONFIG, async function setConfig({config: c, appSettings: {favouriteLabels, recentLabels, activeWindow, nightMode, errorBox: errorBoxVal}, initial = false} = {}) {
         const defer = new Deferred();
         if (!initial) emit(Events.CONFIG_CHANGED, defer)
         const oldValue = config.showBookmarks;
@@ -232,11 +235,16 @@ export function useConfig(documentType) {
         appSettings.nightMode = nightMode;
         appSettings.activeWindow = activeWindow;
         appSettings.errorBox = errorBoxVal;
+        appSettings.favouriteLabels.splice(0);
+        appSettings.favouriteLabels.push(...favouriteLabels);
+        appSettings.recentLabels.splice(0);
+        appSettings.recentLabels.push(...recentLabels);
         errorBox = errorBoxVal;
         if (c.showBookmarks === undefined) {
             // eslint-disable-next-line require-atomic-updates
             config.showBookmarks = oldValue;
         }
+        // eslint-disable-next-line require-atomic-updates
         config.showChapterNumbers = config.showVerseNumbers;
         if (!initial) {
             await nextTick();
@@ -288,6 +296,7 @@ export function useCommon() {
 }
 
 export function useFontAwesome() {
+    library.add(faTextWidth)
     library.add(faShareAlt)
     library.add(faHeadphones)
     library.add(faEdit)
@@ -302,6 +311,9 @@ export function useFontAwesome() {
     library.add(faSort)
     library.add(faIndent)
     library.add(faOutdent)
+    library.add(faHeart)
+    library.add(faHistory)
+    library.add(faFireAlt)
 }
 
 export function checkUnsupportedProps(props, attributeName, values = []) {
@@ -360,11 +372,9 @@ export function useJournal(label) {
 export function useReferenceCollector() {
     const references = reactive([]);
     function collect(linkRef) {
-        console.log("PUSH" ,linkRef);
         references.push(linkRef);
     }
     function clear() {
-        console.error("CLEAR");
         references.splice(0);
     }
     return {references, collect, clear}
@@ -405,6 +415,7 @@ export function useCustomFeatures() {
     const featuresLoaded = ref(false);
     const featuresLoadedPromise = ref(defer.wait());
 
+    // eslint-disable-next-line no-unused-vars
     async function reloadFeatures(featureModuleNames) {
         /*
          TODO: implement loading and usage properly in #981
@@ -503,4 +514,23 @@ export function useAddonFonts() {
         if (!fontModuleNames) return
         reloadFonts(fontModuleNames.split(","));
     })
+}
+
+export function useModal(android) {
+    const modalCount = ref(0);
+    const modalOpen = computed(() => modalCount.value > 0);
+
+    function register() {
+        onMounted(() => {
+            modalCount.value++;
+        })
+
+        onUnmounted(() => {
+            modalCount.value--;
+        });
+    }
+
+    watch(modalOpen, v => android.reportModalState(v), {flush: "sync"})
+
+    return {register}
 }

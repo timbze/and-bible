@@ -18,7 +18,7 @@
 package net.bible.android.view.activity.bookmark
 
 import android.content.Context
-import net.bible.service.device.ScreenSettings.nightMode
+import android.util.Log
 import android.widget.ArrayAdapter
 import net.bible.android.view.util.widget.BookmarkStyleAdapterHelper
 import android.view.ViewGroup
@@ -32,11 +32,12 @@ import net.bible.service.common.displayName
 class ManageLabelItemAdapter(context: Context?,
                              items: List<BookmarkEntities.Label?>?,
                              private val manageLabels: ManageLabels,
-                             private val checkedLabels: MutableSet<Long>,
                              ) : ArrayAdapter<BookmarkEntities.Label?>(context!!, R.layout.manage_labels_list_item, items!!)
 {
+    private val data get() = manageLabels.data
     private val bookmarkStyleAdapterHelper = BookmarkStyleAdapterHelper()
     private lateinit var bindings: ManageLabelsListItemBinding
+
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
         val label = getItem(position)
 
@@ -47,32 +48,92 @@ class ManageLabelItemAdapter(context: Context?,
             ManageLabelsListItemBinding.bind(convertView)
         }        
 
-        val name = bindings.labelName
-        
-        name.text = label!!.displayName
-        val checkbox = bindings.checkbox
-        if(manageLabels.showCheckboxes) {
-            name.setOnClickListener { checkbox.isChecked = !checkbox.isChecked }
-            checkbox.setOnCheckedChangeListener { _, isChecked -> manageLabels.setEnabled(label, isChecked)}
-            checkbox.isChecked = checkedLabels.contains(label.id)
-        } else {
-            checkbox.visibility = View.GONE
-        }
-        if(manageLabels.studyPadMode) {
-            bindings.labelIcon.setImageResource(R.drawable.ic_baseline_studypads_24)
-        }
-        bookmarkStyleAdapterHelper.styleView(name, label, context, false, false)
-        bindings.editLabel.setOnClickListener { manageLabels.editLabel(label) }
-        bindings.deleteLabel.setOnClickListener { manageLabels.delete(label) }
-        bindings.editLabel.visibility = if(label.isSpeakLabel) View.INVISIBLE else View.VISIBLE
-        bindings.deleteLabel.visibility = if (label.isSpeakLabel || label.isUnlabeledLabel) View.INVISIBLE else View.VISIBLE
-        bindings.labelIcon.setColorFilter(label.color)
-        if (nightMode) {
-            bindings.editLabel.setImageResource(R.drawable.ic_pen_24dp)
-            bindings.deleteLabel.setImageResource(R.drawable.ic_delete_24dp)
-        } else {
-            bindings.editLabel.setImageResource(R.drawable.ic_pen_24dp_black)
-            bindings.deleteLabel.setImageResource(R.drawable.ic_delete_24dp_black)
+        bindings.apply {
+            labelName.text = label!!.displayName
+            val checkbox = checkbox
+            if (data.showCheckboxes) {
+                checkbox.setOnCheckedChangeListener { _, isChecked ->
+                    if (isChecked) {
+                        if (!manageLabels.selectMultiple) {
+                            data.selectedLabels.clear()
+                            data.bookmarkPrimaryLabel = null
+                        }
+                        data.selectedLabels.add(label.id)
+                        if (data.bookmarkPrimaryLabel == null) {
+                            data.bookmarkPrimaryLabel = label.id
+                        }
+                    } else {
+                        data.selectedLabels.remove(label.id)
+                        manageLabels.ensureNotBookmarkPrimaryLabel(label)
+                    }
+                    notifyDataSetChanged()
+                }
+                checkbox.isChecked = data.contextSelectedItems.contains(label.id)
+            } else {
+                checkbox.visibility = View.GONE
+            }
+            if (data.mode == ManageLabels.Mode.STUDYPAD) {
+                labelIcon.setImageResource(R.drawable.ic_baseline_studypads_24)
+            }
+
+            val isFavourite = data.favouriteLabels.contains(label.id)
+            val isPrimary = data.contextPrimaryLabel == label.id
+
+            favouriteIcon.setImageResource(if (isFavourite) R.drawable.ic_baseline_favorite_24 else R.drawable.ic_baseline_favorite_border_24)
+            favouriteIcon.setOnClickListener {
+                if(isFavourite) {
+                    data.favouriteLabels.remove(label.id)
+                } else {
+                    data.favouriteLabels.add(label.id)
+                }
+                notifyDataSetChanged()
+            }
+
+            favouriteIcon.visibility = if(data.workspaceEdits) View.VISIBLE else View.GONE
+
+            if (data.primaryShown) {
+                primaryIcon.visibility = if (data.contextSelectedItems.contains(label.id)) View.VISIBLE else View.INVISIBLE
+                primaryIcon.setImageResource(if (isPrimary) R.drawable.ic_baseline_star_24 else R.drawable.ic_baseline_star_border_24)
+                primaryIcon.setOnClickListener {
+                    data.contextPrimaryLabel = label.id
+                    notifyDataSetChanged()
+                }
+            } else {
+                primaryIcon.visibility = View.GONE
+            }
+
+            if(data.workspaceEdits) {
+                if (data.autoAssignLabels.contains(label.id)) {
+                    labelIcon.setImageResource(R.drawable.ic_label_circle)
+                } else {
+                    labelIcon.setImageResource(R.drawable.ic_label_24dp)
+                }
+
+                labelIcon.setOnClickListener {
+                    if (data.autoAssignLabels.contains(label.id)) {
+                        data.autoAssignLabels.remove(label.id)
+                        manageLabels.ensureNotAutoAssignPrimaryLabel(label)
+                    } else {
+                        data.autoAssignLabels.add(label.id)
+                        if (data.autoAssignPrimaryLabel == null) {
+                            data.autoAssignPrimaryLabel = label.id
+                        }
+                    }
+                    notifyDataSetChanged()
+                }
+            } else {
+                labelIcon.setImageResource(R.drawable.ic_label_24dp)
+            }
+
+            // TODO: implement otherwise
+            bookmarkStyleAdapterHelper.styleView(labelName, label, context, false, false)
+            if(data.mode != ManageLabels.Mode.STUDYPAD) {
+                root.setOnClickListener {
+                    Log.i(TAG, "Edit label clicked")
+                    manageLabels.editLabel(label)
+                }
+            }
+            labelIcon.setColorFilter(label.color)
         }
         return convertView?: bindings.root
     }

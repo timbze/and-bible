@@ -3,8 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="net.bible.android.activity"
     android:installLocation="auto"
-    android:versionCode="521"
-    android:versionName="3.4.521-beta">
+    android:versionCode="524"
+    android:versionName="3.4.524-beta">
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -46,7 +46,7 @@
         </activity>
         <activity
             android:name="net.bible.android.view.activity.page.MainBibleActivity"
-            android:configChanges="keyboardHidden|screenSize|locale"
+            android:configChanges="keyboard|navigation|keyboardHidden|screenSize|locale"
             android:theme="@style/MainBibleViewTheme"
             android:windowSoftInputMode="stateHidden|adjustPan"
             android:launchMode="singleTop"
@@ -56,6 +56,11 @@
             android:configChanges="keyboardHidden|orientation|screenSize|locale"
             android:label="@string/chooseBook"
             android:parentActivityName="net.bible.android.view.activity.page.MainBibleActivity" />
+        <activity
+            android:name="net.bible.android.view.activity.bookmark.LabelEditActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize|locale"
+            android:label="@string/edit_label"
+            />
         <activity
             android:name="net.bible.android.view.activity.navigation.GridChoosePassageBook"
             android:configChanges="keyboardHidden|locale"

@@ -31,16 +31,20 @@ import android.widget.ListView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.serializer
 import net.bible.android.activity.R
 import net.bible.android.activity.databinding.ManageLabelsBinding
 import net.bible.android.control.bookmark.BookmarkControl
 import net.bible.android.control.event.ABEventBus
-import net.bible.android.control.event.ToastEvent
 import net.bible.android.control.page.window.ActiveWindowPageManagerProvider
+import net.bible.android.database.WorkspaceEntities
 import net.bible.android.database.bookmarks.BookmarkEntities
 import net.bible.android.view.activity.base.Dialogs
 import net.bible.android.view.activity.base.ListActivityBase
+import net.bible.android.view.activity.page.AppSettingsUpdated
 import net.bible.service.common.CommonUtils
+import net.bible.service.common.CommonUtils.json
 import net.bible.service.download.FakeBookFactory
 import net.bible.service.sword.StudyPadKey
 import java.util.*
@@ -49,23 +53,93 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlin.random.Random.Default.nextInt
 
+fun WorkspaceEntities.WorkspaceSettings.updateFrom(resultData: ManageLabels.ManageLabelsData) {
+    autoAssignLabels = resultData.autoAssignLabels
+    favouriteLabels = resultData.favouriteLabels
+    autoAssignPrimaryLabel = resultData.autoAssignPrimaryLabel
+    ABEventBus.getDefault().post(AppSettingsUpdated())
+}
+
+
 /**
  *
  * ManageLabels serves for bookmark label management, selections (in several contexts) and StudyPad selection.
  */
 class ManageLabels : ListActivityBase() {
     private lateinit var binding: ManageLabelsBinding
-    private val labels: MutableList<BookmarkEntities.Label> = ArrayList()
+    private val allLabels: MutableList<BookmarkEntities.Label> = ArrayList()
+    private val shownLabels: MutableList<BookmarkEntities.Label> = ArrayList()
     @Inject lateinit var bookmarkControl: BookmarkControl
-    @Inject lateinit var labelDialogs: LabelDialogs
     @Inject lateinit var activeWindowPageManagerProvider: ActiveWindowPageManagerProvider
 
-    var showUnassigned = false
-    var showCheckboxes = false
-    var selectMultiple = false
-    var hasResetButton = false
-    var studyPadMode = false
-    private val deletedLabels = mutableSetOf<Long>()
+    enum class Mode {STUDYPAD, WORKSPACE, ASSIGN, HIDELABELS, MANAGELABELS}
+
+    @Serializable
+    data class ManageLabelsData(
+        val mode: Mode,
+
+        val selectedLabels: MutableSet<Long> = mutableSetOf(),
+        val autoAssignLabels: MutableSet<Long> = mutableSetOf(),
+        val favouriteLabels: MutableSet<Long> = mutableSetOf(),
+        val deletedLabels: MutableSet<Long> = mutableSetOf(),
+        val changedLabels: MutableSet<Long> = mutableSetOf(),
+
+        var autoAssignPrimaryLabel: Long? = null,
+        var bookmarkPrimaryLabel: Long? = null,
+
+        var reset: Boolean = false,
+    ) {
+        val showUnassigned: Boolean get() = setOf(Mode.HIDELABELS, Mode.MANAGELABELS).contains(mode)
+        val showCheckboxes: Boolean get() = setOf(Mode.HIDELABELS, Mode.ASSIGN).contains(mode)
+        val hasResetButton: Boolean get() = setOf(Mode.WORKSPACE, Mode.HIDELABELS).contains(mode)
+        val workspaceEdits: Boolean get() = setOf(Mode.WORKSPACE, Mode.ASSIGN).contains(mode)
+        val primaryShown: Boolean get() = setOf(Mode.WORKSPACE, Mode.ASSIGN).contains(mode)
+
+        val contextSelectedItems: MutableSet<Long> get() =
+            when (mode) {
+                Mode.WORKSPACE -> autoAssignLabels
+                else -> selectedLabels
+            }
+
+        var contextPrimaryLabel: Long? get() =
+            when (mode) {
+                Mode.WORKSPACE -> autoAssignPrimaryLabel
+                Mode.ASSIGN -> bookmarkPrimaryLabel
+                else -> null
+            }
+            set(value) =
+                when (mode) {
+                    Mode.WORKSPACE -> autoAssignPrimaryLabel = value
+                    Mode.ASSIGN -> bookmarkPrimaryLabel = value
+                    else -> {}
+                }
+
+        val titleId: Int get() {
+            return when(mode) {
+                Mode.ASSIGN -> R.string.assign_labels
+                Mode.STUDYPAD -> R.string.studypads
+                Mode.WORKSPACE -> R.string.auto_assign_labels
+                Mode.HIDELABELS -> R.string.bookmark_settings_hide_labels_title
+                Mode.MANAGELABELS -> R.string.manage_labels
+            }
+        }
+
+        fun toJSON(): String = json.encodeToString(serializer(), this)
+        fun applyFrom(workspaceSettings: WorkspaceEntities.WorkspaceSettings): ManageLabelsData {
+            favouriteLabels.addAll(workspaceSettings.favouriteLabels)
+            autoAssignLabels.addAll(workspaceSettings.autoAssignLabels)
+            autoAssignPrimaryLabel = workspaceSettings.autoAssignPrimaryLabel
+            return this
+        }
+
+        companion object {
+            fun fromJSON(str: String): ManageLabelsData = json.decodeFromString(serializer(), str)
+        }
+    }
+
+    var selectMultiple: Boolean = false
+
+    lateinit var data: ManageLabelsData
 
     @SuppressLint("MissingSuperCall")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,41 +147,36 @@ class ManageLabels : ListActivityBase() {
         binding = ManageLabelsBinding.inflate(layoutInflater)
         setContentView(binding.root)
         super.buildActivityComponent().inject(this)
-        val selectedLabelIds = intent.getLongArrayExtra(BookmarkControl.LABEL_IDS_EXTRA)
-        if(selectedLabelIds != null) {
-            showCheckboxes = true
-            checkedLabels.addAll(selectedLabelIds.toList())
-        }
 
-        studyPadMode = intent.getBooleanExtra("studyPadMode", false)
-        hasResetButton = intent.getBooleanExtra("resetButton", false)
-        binding.resetButton.visibility = if(hasResetButton) View.VISIBLE else View.GONE
-        showUnassigned = intent.getBooleanExtra("showUnassigned", false)
-        val title = intent.getStringExtra("title")
-        selectMultiple = checkedLabels.size > 1 || CommonUtils.sharedPreferences.getBoolean("assignLabelsSelectMultiple", false)
+        data = ManageLabelsData.fromJSON(intent.getStringExtra("data")!!)
+
+        binding.resetButton.visibility = if(data.hasResetButton) View.VISIBLE else View.GONE
+
+        selectMultiple = data.selectedLabels.size > 1 || CommonUtils.sharedPreferences.getBoolean("assignLabelsSelectMultiple", false)
+
         binding.selectMultipleSwitch.isChecked = selectMultiple
-        binding.selectMultipleSwitch.visibility = if(showCheckboxes) View.VISIBLE else View.GONE
+        binding.selectMultipleSwitch.visibility = if(data.showCheckboxes) View.VISIBLE else View.GONE
         binding.selectMultipleSwitch.setOnCheckedChangeListener { _, isChecked ->
             selectMultiple = isChecked
             CommonUtils.sharedPreferences.edit().putBoolean("assignLabelsSelectMultiple", selectMultiple).apply()
         }
 
-        if(studyPadMode) {
-            setTitle(getString(R.string.studypads))
+        if(data.mode == Mode.STUDYPAD) {
+            title = getString(R.string.studypads)
             binding.okButton.visibility = View.GONE
             binding.spacer.visibility = View.GONE
         }
 
-        if(title!=null) setTitle(title)
+        title = getString(data.titleId)
 
         listView.choiceMode = ListView.CHOICE_MODE_MULTIPLE
-        loadLabelList()
-        listAdapter = ManageLabelItemAdapter(this, labels, this, checkedLabels)
+        updateLabelList(true)
+        listAdapter = ManageLabelItemAdapter(this, shownLabels, this)
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.journals_options_menu, menu)
-        menu.findItem(R.id.help).isVisible = !showCheckboxes
+        menu.findItem(R.id.help).isVisible = !data.showCheckboxes
         return true
     }
 
@@ -135,47 +204,99 @@ class ManageLabels : ListActivityBase() {
     }
 
     override fun onListItemClick(l: ListView, v: View, position: Int, id: Long) {
-        if(studyPadMode) {
-            okay(labels[position])
+        if(data.mode == Mode.STUDYPAD) {
+            okay(shownLabels[position])
         }
         super.onListItemClick(l, v, position, id)
     }
 
-    private val checkedLabels = mutableSetOf<Long>()
-
-    fun delete(label: BookmarkEntities.Label) {
-        ABEventBus.getDefault().post(ToastEvent(R.string.toast_deletion_cancel))
-        deletedLabels.add(label.id)
-        checkedLabels.remove(label.id)
-        loadLabelList()
+    fun ensureNotAutoAssignPrimaryLabel(label: BookmarkEntities.Label) {
+        if (data.autoAssignPrimaryLabel == label.id || data.autoAssignPrimaryLabel == null) {
+            data.autoAssignPrimaryLabel = data.autoAssignLabels.toList().firstOrNull()
+        }
     }
 
-    fun setEnabled(label: BookmarkEntities.Label, enabled: Boolean) {
-        if (enabled) {
-            if(!selectMultiple) {
-                checkedLabels.clear()
-            }
-            checkedLabels.add(label.id)
-        } else checkedLabels.remove(label.id)
-        notifyDataSetChanged()
+    fun ensureNotBookmarkPrimaryLabel(label: BookmarkEntities.Label) {
+        if (data.bookmarkPrimaryLabel == label.id || data.bookmarkPrimaryLabel == null) {
+            data.bookmarkPrimaryLabel = data.selectedLabels.toList().firstOrNull()
+        }
     }
 
     private fun randomColor(): Int = Color.argb(255, nextInt(0, 255), nextInt(0, 255), nextInt(0, 255))
+
+    private var newLabelCount = 1L
 
     fun onNewLabel(v: View?) {
         Log.i(TAG, "New label clicked")
         val newLabel = BookmarkEntities.Label()
         newLabel.color = randomColor()
-        labelDialogs.createLabel(this, newLabel) {
-            loadLabelList()
-            checkedLabels.add(newLabel.id)
-            notifyDataSetChanged()
-        }
+        newLabel.id = -(newLabelCount++)
+        editLabel(newLabel)
     }
 
-    fun editLabel(label: BookmarkEntities.Label?) {
-        Log.i(TAG, "Edit label clicked")
-        labelDialogs.editLabel(this, label!!) { loadLabelList() }
+    private fun deleteLabel(label: BookmarkEntities.Label) {
+        data.deletedLabels.add(label.id)
+        data.selectedLabels.remove(label.id)
+        data.autoAssignLabels.remove(label.id)
+        data.favouriteLabels.remove(label.id)
+        data.changedLabels.remove(label.id)
+
+        ensureNotBookmarkPrimaryLabel(label)
+        ensureNotAutoAssignPrimaryLabel(label)
+    }
+
+    fun editLabel(label_: BookmarkEntities.Label) {
+        var label = label_
+        val intent = Intent(this, LabelEditActivity::class.java)
+        val labelData = LabelEditActivity.LabelData(
+            isAssigning = data.mode == Mode.ASSIGN,
+            label = label,
+            isAutoAssign = data.autoAssignLabels.contains(label.id),
+            isFavourite = data.favouriteLabels.contains(label.id),
+            isAutoAssignPrimary = data.autoAssignPrimaryLabel == label.id,
+            isThisBookmarkPrimary = data.bookmarkPrimaryLabel == label.id,
+        )
+        intent.putExtra("data", json.encodeToString(serializer(), labelData))
+
+        GlobalScope.launch(Dispatchers.Main) {
+            val result = awaitIntent(intent) ?: return@launch
+            if (result.resultCode != Activity.RESULT_CANCELED) {
+                val newLabelData: LabelEditActivity.LabelData = json.decodeFromString(
+                    serializer(), result.resultData.getStringExtra("data")!!)
+
+                if (newLabelData.delete) {
+                    deleteLabel(label)
+
+                } else {
+                    shownLabels.remove(label)
+                    label = newLabelData.label
+                    shownLabels.add(label)
+                    data.changedLabels.add(label.id)
+
+                    if (newLabelData.isAutoAssign) {
+                        data.autoAssignLabels.add(label.id)
+                    } else {
+                        data.autoAssignLabels.remove(label.id)
+                    }
+                    if (newLabelData.isFavourite) {
+                        data.favouriteLabels.add(label.id)
+                    } else {
+                        data.favouriteLabels.remove(label.id)
+                    }
+                    if (newLabelData.isAutoAssignPrimary) {
+                        data.autoAssignPrimaryLabel = label.id
+                    } else {
+                        ensureNotAutoAssignPrimaryLabel(label)
+                    }
+                    if (newLabelData.isThisBookmarkPrimary) {
+                        data.bookmarkPrimaryLabel = label.id
+                    } else {
+                        ensureNotBookmarkPrimaryLabel(label)
+                    }
+                }
+                updateLabelList()
+            }
+        }
     }
 
     fun onOkay(v: View?) {
@@ -184,12 +305,37 @@ class ManageLabels : ListActivityBase() {
 
     private fun okay(selected: BookmarkEntities.Label? = null) = GlobalScope.launch(Dispatchers.Main) {
         Log.i(TAG, "Okay clicked")
-
-        if(deletedLabels.size > 0 && !askConfirmation()) return@launch
+        val deleteLabelIds = data.deletedLabels.filter{ it > 0 }.toList()
+        if(deleteLabelIds.isNotEmpty() && !askConfirmation(deleteLabelIds.size)) return@launch
         val result = Intent()
-        bookmarkControl.deleteLabels(deletedLabels.toList())
-        val labelIds = checkedLabels.toLongArray()
-        result.putExtra(BookmarkControl.LABEL_IDS_EXTRA, labelIds)
+        bookmarkControl.deleteLabels(deleteLabelIds)
+        val saveLabels = shownLabels.filter { data.changedLabels.contains(it.id) && !data.deletedLabels.contains(it.id) }
+        val newLabels = saveLabels.filter { it.id < 0 }
+        val existingLabels = saveLabels.filter { it.id > 0 }
+
+        for (it in newLabels) {
+            val oldLabel = it.id
+            it.id = 0
+            it.id = bookmarkControl.insertOrUpdateLabel(it).id
+            for(list in listOf(data.selectedLabels, data.autoAssignLabels, data.changedLabels, data.favouriteLabels)) {
+                if(list.contains(oldLabel)) {
+                    list.remove(oldLabel)
+                    list.add(it.id)
+                }
+            }
+            if(data.bookmarkPrimaryLabel == oldLabel) {
+                data.bookmarkPrimaryLabel = it.id
+            }
+            if(data.autoAssignPrimaryLabel == oldLabel) {
+                data.autoAssignPrimaryLabel = it.id
+            }
+        }
+
+        for (it in existingLabels) {
+            bookmarkControl.insertOrUpdateLabel(it)
+        }
+
+        result.putExtra("data", data.toJSON())
         setResult(Activity.RESULT_OK, result)
         if(selected != null) {
             studyPadSelected(selected)
@@ -197,9 +343,9 @@ class ManageLabels : ListActivityBase() {
         finish()
     }
 
-    private suspend fun askConfirmation()  = suspendCoroutine<Boolean> {
+    private suspend fun askConfirmation(size: Int)  = suspendCoroutine<Boolean> {
         AlertDialog.Builder(this)
-            .setMessage(getString(R.string.confirm_delete_study_pads, deletedLabels.size))
+            .setMessage(getString(R.string.confirm_delete_study_pads, size))
             .setPositiveButton(R.string.yes) { _, _ ->
                 it.resume(true)
             }
@@ -211,8 +357,11 @@ class ManageLabels : ListActivityBase() {
 
     fun onReset(v: View?) {
         val result = Intent()
-        result.putExtra("reset", true)
-        setResult(Activity.RESULT_CANCELED, result)
+        data.reset = true
+
+        result.putExtra("data", data.toJSON())
+
+        setResult(Activity.RESULT_OK, result)
         finish();
     }
 
@@ -221,12 +370,24 @@ class ManageLabels : ListActivityBase() {
         finish();
     }
 
-    private fun loadLabelList() {
-        labels.clear()
-        labels.addAll(bookmarkControl.assignableLabels.filterNot { deletedLabels.contains(it.id) || it.isSpeakLabel || it.isUnlabeledLabel })
-        if(showUnassigned) {
-            labels.add(bookmarkControl.labelUnlabelled)
+    private fun updateLabelList(fromDb: Boolean = false) {
+        if(fromDb) {
+            allLabels.clear()
+            allLabels.addAll(bookmarkControl.assignableLabels.filterNot { it.isSpeakLabel || it.isUnlabeledLabel })
+            if (data.showUnassigned) {
+                allLabels.add(bookmarkControl.labelUnlabelled)
+            }
+            shownLabels.addAll(allLabels)
         }
+        shownLabels.myRemoveIf { data.deletedLabels.contains(it.id) }
+        shownLabels.sortBy { it.name }
+        val labelIds = shownLabels.map { it.id }.toSet()
+
+        // Some sanity check
+        data.autoAssignLabels.myRemoveIf { !labelIds.contains(it) }
+        data.favouriteLabels.myRemoveIf { !labelIds.contains(it) }
+        data.selectedLabels.myRemoveIf { !labelIds.contains(it) }
+
         notifyDataSetChanged()
     }
 
@@ -234,3 +395,7 @@ class ManageLabels : ListActivityBase() {
         private const val TAG = "BookmarkLabels"
     }
 }
+
+private fun <E> MutableSet<E>.myRemoveIf(function: (it: E) -> Boolean)  = filter { function.invoke(it) }.forEach { remove(it) }
+private fun <E> MutableList<E>.myRemoveIf(function: (it: E) -> Boolean)  = filter { function.invoke(it) }.forEach { remove(it) }
+
