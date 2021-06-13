@@ -296,7 +296,7 @@ class ReadingPlanTextFileDao {
         }
     }
 
-    private class ReadingPlanProperties : Properties() {
+    internal class ReadingPlanProperties : Properties() {
         var planCode = ""
         var planName: String? = null
         var planDescription: String? = null
@@ -310,9 +310,9 @@ class ReadingPlanTextFileDao {
         private val USER_READING_PLAN_FOLDER = SharedConstants.MANUAL_READINGPLAN_DIR
         private const val READING_PLAN_FOLDER = SharedConstants.READINGPLAN_DIR_NAME
         private const val DOT_PROPERTIES = ".properties"
-        private const val VERSIFICATION = "Versification"
-        private const val DEFAULT_VERSIFICATION = SystemKJV.V11N_NAME
-        private const val INCLUSIVE_VERSIFICATION = SystemNRSVA.V11N_NAME
+        internal const val VERSIFICATION = "Versification"
+        internal const val DEFAULT_VERSIFICATION = SystemKJV.V11N_NAME
+        internal const val INCLUSIVE_VERSIFICATION = SystemNRSVA.V11N_NAME
 
         private const val TAG = "ReadingPlanDao"
     }

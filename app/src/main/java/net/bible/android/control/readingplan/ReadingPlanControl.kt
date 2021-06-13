@@ -44,11 +44,6 @@ import java.util.Date
 import javax.inject.Inject
 import kotlin.math.roundToLong
 
-
-/** Control status of reading plans
- *
- * @author Martin Denham [mjdenham at gmail dot com]
- */
 @ApplicationScope
 class ReadingPlanControl @Inject constructor(
 		private val speakControl: SpeakControl,
@@ -103,7 +98,8 @@ class ReadingPlanControl @Inject constructor(
                     it.readingDate == todayDate.time
                 }?.day ?: 1
             } else {
-                readingPlanRepo.getCurrentDay(planCode)
+                // TODO was "currentDay" before. Change workflow accordingly
+                readingPlanRepo.getDayComplete(planCode)
             }
         }
         private set(day) {
@@ -213,8 +209,6 @@ class ReadingPlanControl @Inject constructor(
 
         // was this the next reading plan day due whether on schedule or not
         if (currentPlanDay == day) {
-            // do not leave prefs for historic days - we show all historic readings as 'read'
-            getReadingStatus(day).delete(planInfo)
 
             // was this the last day in the plan
             if (readingPlanTextDao.getNumberOfPlanDays(currentPlanCode) == day) {

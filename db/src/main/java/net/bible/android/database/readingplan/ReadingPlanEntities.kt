@@ -39,8 +39,8 @@ class ReadingPlanEntities {
          * it is incremented every time the plan is reset */
         var readIteration: Int? = null,
         /**
-         * For those reading plans that were in progress during db v44-45 upgrade. ReadingPlanHistory will now save
-         * records for each read day but status table in v44 was only used while day reading was in progress, then deleted
+         * For those reading plans that were in progress during db v51-52 upgrade. ReadingPlanHistory will now save
+         * records for each read day but status table in v51 was only used while day reading was in progress, then deleted
          * when day is done. With "upgraded" field we know that if minimum day in ReadingPlanHistory for a certain
          * plan is 45, that all days before that are done.
          */

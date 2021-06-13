@@ -39,10 +39,6 @@ class HistoricReadingStatus(planCode: String, day: Int, numReadings: Int) : Read
         return true
     }
 
-    override fun delete(planInfo: ReadingPlanInfoDto) {
-        // do nothing
-    }
-
     override fun reloadStatus() {
         // do nothing
     }

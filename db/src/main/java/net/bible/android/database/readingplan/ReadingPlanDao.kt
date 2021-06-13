@@ -23,36 +23,31 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import net.bible.android.database.readingplan.ReadingPlanEntities.ReadingPlan
-import net.bible.android.database.readingplan.ReadingPlanEntities.ReadingPlanStatus
+import net.bible.android.database.readingplan.ReadingPlanEntities.ReadingPlanHistory
 
-/**
- * Dao for readingplan and readingplan_status tables
- */
 @Dao
 interface ReadingPlanDao {
 
     //region ReadingPlanStatus
-    @Query("SELECT * FROM readingplan_status WHERE plan_code = :planCode AND plan_day = :planDay")
-    suspend fun getStatus(planCode: String, planDay: Int): ReadingPlanStatus?
+    @Query("""SELECT rh.* FROM ReadingPlanHistory rh 
+            LEFT JOIN ReadingPlan r on rh.readingPlanFileName = r.fileName
+            WHERE rh.readingPlanFileName = :planCode AND rh.dayNumber = :planDay AND rh.readIteration = r.readIteration""")
+    suspend fun getStatus(planCode: String, planDay: Int): ReadingPlanHistory?
 
-    @Query("DELETE FROM readingplan_status WHERE plan_code = :planCode AND plan_day < :planDay")
-    suspend fun deleteStatusesBeforeDay(planCode: String, planDay: Int)
-
-    @Query("DELETE FROM readingplan_status WHERE plan_code = :planCode")
-    suspend fun deleteStatusesForPlan(planCode: String)
-
+    // TODO don't use .REPLACE
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun addPlanStatus(status: ReadingPlanStatus)
+    suspend fun addPlanStatus(status: ReadingPlanHistory)
     //endregion
 
     //region ReadingPlan
-    @Query("SELECT * FROM readingplan WHERE plan_code = :planCode")
+    @Query("SELECT * FROM ReadingPlan WHERE fileName = :planCode")
     suspend fun getPlan(planCode: String): ReadingPlan?
 
+    // TODO don't use .REPLACE
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun updatePlan(plan: ReadingPlan)
 
-    @Query("DELETE FROM readingplan WHERE plan_code = :planCode")
+    @Query("DELETE FROM ReadingPlan WHERE fileName = :planCode")
     suspend fun deletePlanInfo(planCode: String)
 
     //endregion

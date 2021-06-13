@@ -96,12 +96,6 @@ open class ReadingStatus(val planCode: String, val day: Int, private val numRead
         }
     }
 
-    /** do not leave prefs around for historic days
-     */
-    open fun delete(planInfo: ReadingPlanInfoDto) {
-        readingPlanRepo.deleteOldStatuses(planInfo, day)
-    }
-
     open fun reloadStatus() {
         val status: String? = readingPlanRepo.getReadingStatus(planCode, day)
         status?.let { this.status = ReadingStatus(status) }
