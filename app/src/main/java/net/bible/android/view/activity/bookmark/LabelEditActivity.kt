@@ -19,9 +19,17 @@ package net.bible.android.view.activity.bookmark
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.ColorFilter
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.style.ImageSpan
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.AppCompatCheckBox
+import androidx.core.graphics.drawable.updateBounds
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import com.jaredrummler.android.colorpicker.ColorPickerDialogListener
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +53,7 @@ class LabelEditActivity: ActivityBase(), ColorPickerDialogListener {
     override fun onColorSelected(dialogId: Int, color: Int) {
         // let's remove alpha
         data.label.color = color or (255 shl 24)
-        updateUI()
+        updateColor()
     }
 
     private fun updateColor() {
@@ -53,6 +61,29 @@ class LabelEditActivity: ActivityBase(), ColorPickerDialogListener {
     }
 
     override fun onDialogDismissed(dialogId: Int) {}
+
+    override fun onBackPressed() {
+        saveAndExit()
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        menu.clear()
+        menuInflater.inflate(R.menu.edit_label_options_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        var isHandled = true
+        when(item.itemId){
+            R.id.removeLabel -> remove()
+            android.R.id.home -> saveAndExit()
+            else -> isHandled = false
+        }
+        if (!isHandled) {
+            isHandled = super.onOptionsItemSelected(item)
+        }
+        return isHandled
+    }
 
     @Serializable
     data class LabelData (
@@ -63,6 +94,7 @@ class LabelEditActivity: ActivityBase(), ColorPickerDialogListener {
         var isFavourite: Boolean,
 
         var isAutoAssignPrimary: Boolean,
+        var isThisBookmarkSelected: Boolean,
         var isThisBookmarkPrimary: Boolean,
         var delete: Boolean = false,
     ) {
@@ -89,7 +121,11 @@ class LabelEditActivity: ActivityBase(), ColorPickerDialogListener {
         if(!data.isAutoAssign) {
             data.isAutoAssignPrimary = false
         }
+        data.isThisBookmarkSelected = selectedLabelCheckBox.isChecked
         data.isThisBookmarkPrimary = primaryLabelCheckBox.isChecked
+        if(!data.isThisBookmarkSelected) {
+            data.isThisBookmarkPrimary = false
+        }
     }
 
     private fun updateUI() = binding.apply {
@@ -104,9 +140,43 @@ class LabelEditActivity: ActivityBase(), ColorPickerDialogListener {
         if (data.label.isUnlabeledLabel) {
             labelName.isEnabled = false
         }
+        selectedLabelCheckBox.isChecked = data.isThisBookmarkSelected
+        primaryLabelCheckBox.isEnabled = data.isThisBookmarkSelected
         primaryAutoAssignCheckBox.isEnabled = data.isAutoAssign
 
         thisBookmarkCategory.visibility = if(data.isAssigning) View.VISIBLE else View.GONE
+    }
+
+    private fun saveAndExit() {
+        updateData()
+
+        val resultIntent = Intent()
+        resultIntent.putExtra("data", data.toJSON())
+        setResult(Activity.RESULT_OK, resultIntent)
+        finish()
+    }
+
+    private fun remove() {
+        updateData()
+
+        GlobalScope.launch(Dispatchers.Main) {
+            val result = suspendCoroutine<Boolean> {
+                AlertDialog.Builder(this@LabelEditActivity)
+                    .setMessage(getString(R.string.delete_label_confirmation, data.label.name))
+                    .setPositiveButton(R.string.yes) { _, _ -> it.resume(true) }
+                    .setNegativeButton(R.string.no) {_, _ -> it.resume(false)}
+                    .setCancelable(true)
+                    .create().show()
+            }
+            if(result) {
+                data.delete = true
+
+                val resultIntent = Intent()
+                resultIntent.putExtra("data", data.toJSON())
+                setResult(Activity.RESULT_OK, resultIntent)
+                finish()
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -118,58 +188,46 @@ class LabelEditActivity: ActivityBase(), ColorPickerDialogListener {
         data = LabelData.fromJSON(intent.getStringExtra("data")!!)
 
         binding.apply {
+            addImage(favouriteLabelCheckBox, R.drawable.ic_baseline_favorite_24)
+            addImage(autoAssignCheckBox, R.drawable.ic_label_circle)
+            addImage(primaryAutoAssignCheckBox, R.drawable.ic_baseline_bookmark_24)
+            addImage(primaryLabelCheckBox, R.drawable.ic_baseline_bookmark_24)
+
             updateUI()
             updateData()
             updateUI()
 
-            editColorButton.setOnClickListener {
-                ColorPickerDialog.newBuilder()
-                    .setColor(data.label.color)
-                    .show(this@LabelEditActivity)
-            }
+            titleIcon.setOnClickListener { editColor() }
 
-            okButton.setOnClickListener {
-                updateData()
-
-                val resultIntent = Intent()
-                resultIntent.putExtra("data", data.toJSON())
-                setResult(Activity.RESULT_OK, resultIntent)
-                finish()
-            }
-
-            autoAssignCheckBox.setOnCheckedChangeListener { buttonView, isChecked ->
+            autoAssignCheckBox.setOnCheckedChangeListener { _, _ ->
                 updateData()
                 updateUI()
             }
-
-            cancelButton.setOnClickListener {
-                setResult(Activity.RESULT_CANCELED)
-                finish()
-            }
-            removeButton.setOnClickListener {
+            selectedLabelCheckBox.setOnCheckedChangeListener { _, _ ->
                 updateData()
-
-                GlobalScope.launch(Dispatchers.Main) {
-                    val result = suspendCoroutine<Boolean> {
-                        AlertDialog.Builder(this@LabelEditActivity)
-                            .setMessage(getString(R.string.delete_label_confirmation, data.label.name))
-                            .setPositiveButton(R.string.yes) { _, _ -> it.resume(true) }
-                            .setNegativeButton(R.string.no) {_, _ -> it.resume(false)}
-                            .setCancelable(true)
-                            .create().show()
-                    }
-                    if(result) {
-                        data.delete = true
-
-                        val resultIntent = Intent()
-                        resultIntent.putExtra("data", data.toJSON())
-                        setResult(Activity.RESULT_OK, resultIntent)
-                        finish()
-                    }
-                }
+                updateUI()
             }
         }
     }
+
+    private fun editColor() {
+        ColorPickerDialog.newBuilder()
+            .setColor(data.label.color)
+            .show(this@LabelEditActivity)
+    }
+
+    private fun addImage(view: AppCompatCheckBox, icon: Int) {
+        val imageSpan = ImageSpan(this, icon, ImageSpan.ALIGN_BASELINE)
+        imageSpan.drawable.setTint(view.currentHintTextColor)
+        val h = imageSpan.drawable.intrinsicHeight / 2
+        val w = imageSpan.drawable.intrinsicWidth / 2
+        imageSpan.drawable.setBounds(0, 0, w, h)
+        val spannableString = SpannableString("${view.text} *")
+        val l = view.text.length+1
+        spannableString.setSpan(imageSpan, l, l+1, SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE)
+        view.setText(spannableString, TextView.BufferType.SPANNABLE)
+    }
+
     companion object {
         const val RESULT_REMOVE = 999
     }

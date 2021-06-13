@@ -43,6 +43,7 @@ import net.bible.android.database.bookmarks.BookmarkEntities
 import net.bible.android.view.activity.base.Dialogs
 import net.bible.android.view.activity.base.ListActivityBase
 import net.bible.android.view.activity.page.AppSettingsUpdated
+import net.bible.android.view.activity.page.MainBibleActivity.Companion.mainBibleActivity
 import net.bible.service.common.CommonUtils
 import net.bible.service.common.CommonUtils.json
 import net.bible.service.download.FakeBookFactory
@@ -68,7 +69,7 @@ fun WorkspaceEntities.WorkspaceSettings.updateFrom(resultData: ManageLabels.Mana
 class ManageLabels : ListActivityBase() {
     private lateinit var binding: ManageLabelsBinding
     private val allLabels: MutableList<BookmarkEntities.Label> = ArrayList()
-    private val shownLabels: MutableList<BookmarkEntities.Label> = ArrayList()
+    private val shownLabels: MutableList<Any> = ArrayList()
     @Inject lateinit var bookmarkControl: BookmarkControl
     @Inject lateinit var activeWindowPageManagerProvider: ActiveWindowPageManagerProvider
 
@@ -94,6 +95,8 @@ class ManageLabels : ListActivityBase() {
         val hasResetButton: Boolean get() = setOf(Mode.WORKSPACE, Mode.HIDELABELS).contains(mode)
         val workspaceEdits: Boolean get() = setOf(Mode.WORKSPACE, Mode.ASSIGN).contains(mode)
         val primaryShown: Boolean get() = setOf(Mode.WORKSPACE, Mode.ASSIGN).contains(mode)
+        val showActiveCategory: Boolean get() = setOf(Mode.WORKSPACE, Mode.ASSIGN).contains(mode)
+        val hideCategories: Boolean get() = setOf(Mode.STUDYPAD).contains(mode)
 
         val contextSelectedItems: MutableSet<Long> get() =
             when (mode) {
@@ -141,6 +144,10 @@ class ManageLabels : ListActivityBase() {
 
     lateinit var data: ManageLabelsData
 
+    override fun onBackPressed() {
+        saveAndExit()
+    }
+
     @SuppressLint("MissingSuperCall")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState, false)
@@ -150,7 +157,6 @@ class ManageLabels : ListActivityBase() {
 
         data = ManageLabelsData.fromJSON(intent.getStringExtra("data")!!)
 
-        binding.resetButton.visibility = if(data.hasResetButton) View.VISIBLE else View.GONE
 
         selectMultiple = data.selectedLabels.size > 1 || CommonUtils.sharedPreferences.getBoolean("assignLabelsSelectMultiple", false)
 
@@ -163,8 +169,6 @@ class ManageLabels : ListActivityBase() {
 
         if(data.mode == Mode.STUDYPAD) {
             title = getString(R.string.studypads)
-            binding.okButton.visibility = View.GONE
-            binding.spacer.visibility = View.GONE
         }
 
         title = getString(data.titleId)
@@ -175,17 +179,20 @@ class ManageLabels : ListActivityBase() {
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.journals_options_menu, menu)
+        menu.clear()
+        menuInflater.inflate(R.menu.manage_labels_options_menu, menu)
+        menu.findItem(R.id.resetButton).isVisible = data.hasResetButton
         menu.findItem(R.id.help).isVisible = !data.showCheckboxes
         return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        var isHandled = false
+        var isHandled = true
         when(item.itemId){
-            R.id.help -> {
-                CommonUtils.showHelp(this, listOf(R.string.help_studypads_title, R.string.help_bookmarks_title))
-            }
+            R.id.help -> CommonUtils.showHelp(this, listOf(R.string.help_studypads_title, R.string.help_bookmarks_title))
+            R.id.newLabel -> newLabel()
+            android.R.id.home -> saveAndExit()
+            else -> isHandled = false
         }
         if (!isHandled) {
             isHandled = super.onOptionsItemSelected(item)
@@ -205,7 +212,8 @@ class ManageLabels : ListActivityBase() {
 
     override fun onListItemClick(l: ListView, v: View, position: Int, id: Long) {
         if(data.mode == Mode.STUDYPAD) {
-            okay(shownLabels[position])
+            val selected = shownLabels[position]
+            if(selected is BookmarkEntities.Label) saveAndExit(selected)
         }
         super.onListItemClick(l, v, position, id)
     }
@@ -226,7 +234,7 @@ class ManageLabels : ListActivityBase() {
 
     private var newLabelCount = 1L
 
-    fun onNewLabel(v: View?) {
+    private fun newLabel() {
         Log.i(TAG, "New label clicked")
         val newLabel = BookmarkEntities.Label()
         newLabel.color = randomColor()
@@ -255,6 +263,7 @@ class ManageLabels : ListActivityBase() {
             isFavourite = data.favouriteLabels.contains(label.id),
             isAutoAssignPrimary = data.autoAssignPrimaryLabel == label.id,
             isThisBookmarkPrimary = data.bookmarkPrimaryLabel == label.id,
+            isThisBookmarkSelected = data.selectedLabels.contains(label.id)
         )
         intent.putExtra("data", json.encodeToString(serializer(), labelData))
 
@@ -263,6 +272,10 @@ class ManageLabels : ListActivityBase() {
             if (result.resultCode != Activity.RESULT_CANCELED) {
                 val newLabelData: LabelEditActivity.LabelData = json.decodeFromString(
                     serializer(), result.resultData.getStringExtra("data")!!)
+
+                if(newLabelData.label.name.isEmpty() && label.id < 0) {
+                    return@launch
+                }
 
                 if (newLabelData.delete) {
                     deleteLabel(label)
@@ -293,23 +306,31 @@ class ManageLabels : ListActivityBase() {
                     } else {
                         ensureNotBookmarkPrimaryLabel(label)
                     }
+                    if(data.mode == Mode.ASSIGN) {
+                        if (newLabelData.isThisBookmarkSelected) {
+                            data.selectedLabels.add(label.id)
+                        } else {
+                            data.selectedLabels.remove(label.id)
+                        }
+                    }
                 }
                 updateLabelList()
             }
         }
     }
 
-    fun onOkay(v: View?) {
-        okay()
-    }
-
-    private fun okay(selected: BookmarkEntities.Label? = null) = GlobalScope.launch(Dispatchers.Main) {
+    private fun saveAndExit(selected: BookmarkEntities.Label? = null) = GlobalScope.launch(Dispatchers.Main) {
         Log.i(TAG, "Okay clicked")
         val deleteLabelIds = data.deletedLabels.filter{ it > 0 }.toList()
-        if(deleteLabelIds.isNotEmpty() && !askConfirmation(deleteLabelIds.size)) return@launch
+        if(deleteLabelIds.isNotEmpty()) {
+            bookmarkControl.deleteLabels(deleteLabelIds)
+        }
+
         val result = Intent()
-        bookmarkControl.deleteLabels(deleteLabelIds)
-        val saveLabels = shownLabels.filter { data.changedLabels.contains(it.id) && !data.deletedLabels.contains(it.id) }
+        val saveLabels = shownLabels
+            .filterIsInstance<BookmarkEntities.Label>()
+            .filter{ data.changedLabels.contains(it.id) && !data.deletedLabels.contains(it.id) }
+
         val newLabels = saveLabels.filter { it.id < 0 }
         val existingLabels = saveLabels.filter { it.id > 0 }
 
@@ -343,45 +364,86 @@ class ManageLabels : ListActivityBase() {
         finish()
     }
 
-    private suspend fun askConfirmation(size: Int)  = suspendCoroutine<Boolean> {
-        AlertDialog.Builder(this)
-            .setMessage(getString(R.string.confirm_delete_study_pads, size))
-            .setPositiveButton(R.string.yes) { _, _ ->
+    private suspend fun askConfirmation(message: String, yesNo: Boolean = false)  = suspendCoroutine<Boolean> {
+        AlertDialog.Builder(this).apply {
+            setMessage(message)
+            setPositiveButton(R.string.yes) { _, _ ->
                 it.resume(true)
             }
-            .setCancelable(true)
-            .setOnCancelListener { _ -> it.resume(false) }
-            .setNegativeButton(R.string.cancel) { _, _ -> it.resume(false)}
-            .show()
+            if(yesNo) {
+                setNegativeButton(R.string.no) { _, _ ->
+                    it.resume(false)
+                }
+                setCancelable(false)
+            } else {
+                setCancelable(true)
+                setOnCancelListener { _ -> it.resume(false) }
+                setNegativeButton(R.string.cancel) { _, _ -> it.resume(false) }
+            }
+            show()
+        }
     }
 
-    fun onReset(v: View?) {
-        val result = Intent()
-        data.reset = true
+    fun reset() {
+        GlobalScope.launch(Dispatchers.Main) {
+            val msgId = when(data.mode) {
+                Mode.WORKSPACE -> R.string.reset_workspace_labels
+                Mode.HIDELABELS -> R.string.reset_hide_labels
+                else -> throw RuntimeException("Illegal value")
+            }
+            if(askConfirmation(getString(msgId))) {
+                val result = Intent()
+                data.reset = true
 
-        result.putExtra("data", data.toJSON())
+                result.putExtra("data", data.toJSON())
 
-        setResult(Activity.RESULT_OK, result)
-        finish();
+                setResult(Activity.RESULT_OK, result)
+                finish()
+            }
+        }
+
     }
 
-    fun onCancel(v: View?) {
-        setResult(Activity.RESULT_CANCELED)
-        finish();
-    }
-
-    private fun updateLabelList(fromDb: Boolean = false) {
+    fun updateLabelList(fromDb: Boolean = false) {
         if(fromDb) {
             allLabels.clear()
             allLabels.addAll(bookmarkControl.assignableLabels.filterNot { it.isSpeakLabel || it.isUnlabeledLabel })
             if (data.showUnassigned) {
                 allLabels.add(bookmarkControl.labelUnlabelled)
             }
+            if(data.showActiveCategory) {
+                shownLabels.add(LabelCategory.ACTIVE)
+            }
+            if(!data.hideCategories) {
+                shownLabels.add(LabelCategory.RECENT)
+                shownLabels.add(LabelCategory.OTHER)
+            }
             shownLabels.addAll(allLabels)
         }
-        shownLabels.myRemoveIf { data.deletedLabels.contains(it.id) }
-        shownLabels.sortBy { it.name }
-        val labelIds = shownLabels.map { it.id }.toSet()
+        val recentLabelIds = mainBibleActivity.workspaceSettings.recentLabels.map { it.labelId }
+        shownLabels.myRemoveIf { it is BookmarkEntities.Label && data.deletedLabels.contains(it.id) }
+
+        shownLabels.sortWith(compareBy({
+            val inActiveCategory = data.showActiveCategory && (it == LabelCategory.ACTIVE || (it is BookmarkEntities.Label && data.contextSelectedItems.contains(it.id)))
+            val inRecentCategory = !data.hideCategories && (it == LabelCategory.RECENT || (it is BookmarkEntities.Label && recentLabelIds.contains(it.id)))
+            when {
+                inActiveCategory -> 1
+                inRecentCategory -> 2
+                else -> 3
+            }
+        }, {
+            when (it) {
+                is LabelCategory -> 1
+                else -> 2
+            }
+        }, {
+            when (it) {
+                is BookmarkEntities.Label -> it.name.toLowerCase(Locale.getDefault())
+                else -> ""
+            }
+        }))
+
+        val labelIds = shownLabels.filterIsInstance<BookmarkEntities.Label>().map { it.id }.toSet()
 
         // Some sanity check
         data.autoAssignLabels.myRemoveIf { !labelIds.contains(it) }
@@ -395,6 +457,8 @@ class ManageLabels : ListActivityBase() {
         private const val TAG = "BookmarkLabels"
     }
 }
+
+enum class LabelCategory {ACTIVE, RECENT, OTHER}
 
 private fun <E> MutableSet<E>.myRemoveIf(function: (it: E) -> Boolean)  = filter { function.invoke(it) }.forEach { remove(it) }
 private fun <E> MutableList<E>.myRemoveIf(function: (it: E) -> Boolean)  = filter { function.invoke(it) }.forEach { remove(it) }

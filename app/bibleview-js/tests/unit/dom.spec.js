@@ -22,11 +22,12 @@ import {
     findParentsBeforeVerseSibling,
     findPreviousSiblingWithClass, lastTextNode, textLength, walkBackText
 } from "@/dom";
+import {highlightRange} from "@/lib/highlight-range";
 
 const test1 = `
 <!DOCTYPE html>
 <div>
-  <div class="verse" id="v-0">
+  <div class="verse" id="o-0">
     text1
     <div id="id1-1">
       text2
@@ -58,7 +59,7 @@ const test1 = `
     <b id="b-3-2">test1</b>
     test
   </div>
-  <div class="verse" id="v-1">
+  <div class="verse" id="o-1">
     text6
     <div id="id2-1">
       text7
@@ -83,6 +84,146 @@ function getDom(html) {
     return new JSDOM(stripped);
 }
 
+describe("highlighting", () => {
+   it("test that highlight and undoing work", () => {
+       const hlTestDoc = `
+<!DOCTYPE html>
+<div>
+  <div class="verse" id="o-0">
+    text1
+  </div>
+</div>  
+`;
+       const highLighted = `<html><head></head><body><div><div class="verse" id="o-0"><span style="width:1">text1</span></div></div></body></html>`
+       const unHighLighted = `<html><head></head><body><div><div class="verse" id="o-0">text1</div></div></body></html>`
+       const dom = getDom(hlTestDoc);
+       const document = dom.window.document;
+       const range = document.createRange();
+       const e = document.querySelector("#o-0")
+       {
+           const node1 = e.childNodes[0];
+           range.setStart(node1, 0);
+           range.setEnd(node1, 5);
+           expect(e.childNodes.length).toBe(1);
+           const {undo} = highlightRange(range, "span", {style: "width:1"});
+           expect(e.childNodes.length).toBe(1);
+           expect(document.documentElement.outerHTML).toBe(highLighted);
+           undo();
+           expect(e.childNodes.length).toBe(1);
+           expect(document.documentElement.outerHTML).toBe(unHighLighted);
+       }
+       {
+           const node1 = e.childNodes[0];
+           range.setStart(node1, 0);
+           range.setEnd(node1, 5);
+           const {undo} = highlightRange(range, "span", {style: "width:1"});
+           expect(document.documentElement.outerHTML).toBe(highLighted);
+           undo();
+           expect(document.documentElement.outerHTML).toBe(unHighLighted);
+       }
+   });
+
+    it("test that highlight two consequent highlight ranges work", () => {
+        const hlTestDoc = `
+<!DOCTYPE html>
+<div>
+  <div class="verse" id="o-0">
+    text1text2
+  </div>
+</div>  
+`;
+        const highLighted = `<html><head></head><body><div><div class="verse" id="o-0"><span style="width:1">text1</span><span style="width:2">text2</span></div></div></body></html>`
+        const highLighted1 = `<html><head></head><body><div><div class="verse" id="o-0"><span style="width:1">text1</span>text2</div></div></body></html>`
+        const unHighLighted1 = `<html><head></head><body><div><div class="verse" id="o-0">text1<span style="width:2">text2</span></div></div></body></html>`
+        const unHighLighted = `<html><head></head><body><div><div class="verse" id="o-0">text1text2</div></div></body></html>`
+        const dom = getDom(hlTestDoc);
+        const document = dom.window.document;
+        const range = document.createRange();
+        const range2 = document.createRange();
+        const e = document.querySelector("#o-0")
+        {
+            const node1 = e.childNodes[0];
+            range.setStart(node1, 0);
+            range.setEnd(node1, 5);
+            range2.setStart(node1, 5);
+            range2.setEnd(node1, 10);
+            expect(e.childNodes.length).toBe(1);
+
+            const {undo: undo1} = highlightRange(range, "span", {style: "width:1"});
+            expect(document.documentElement.outerHTML).toBe(highLighted1);
+            expect(e.childNodes.length).toBe(2);
+            const {undo: undo2} = highlightRange(range2, "span", {style: "width:2"});
+            expect(e.childNodes.length).toBe(2);
+            expect(document.documentElement.outerHTML).toBe(highLighted);
+            undo1();
+            expect(document.documentElement.outerHTML).toBe(unHighLighted1);
+            expect(e.childNodes.length).toBe(3);
+            undo2();
+            expect(e.childNodes.length).toBe(3);
+            expect(document.documentElement.outerHTML).toBe(unHighLighted);
+        }
+        for(let i=0; i<5; i++) {
+            const node1 = e.childNodes[0];
+            const node2 = e.childNodes[2];
+            range.setStart(node1, 0);
+            range.setEnd(node1, 5);
+            range2.setStart(node2, 0);
+            range2.setEnd(node2, 5);
+            expect(e.childNodes.length).toBe(3);
+
+            const {undo: undo1} = highlightRange(range, "span", {style: "width:1"});
+            expect(document.documentElement.outerHTML).toBe(highLighted1);
+            expect(e.childNodes.length).toBe(3);
+            const {undo: undo2} = highlightRange(range2, "span", {style: "width:2"});
+            expect(e.childNodes.length).toBe(3);
+            expect(document.documentElement.outerHTML).toBe(highLighted);
+            undo1();
+            expect(document.documentElement.outerHTML).toBe(unHighLighted1);
+            expect(e.childNodes.length).toBe(3);
+            undo2();
+            expect(e.childNodes.length).toBe(3);
+            expect(document.documentElement.outerHTML).toBe(unHighLighted);
+        }
+
+    });
+
+    it("test 2 (undo's in opposite order) that highlight two consequent highlight ranges work", () => {
+        const hlTestDoc = `
+<!DOCTYPE html>
+<div>
+  <div class="verse" id="o-0">
+    text1text2
+  </div>
+</div>  
+`;
+        const highLighted = `<html><head></head><body><div><div class="verse" id="o-0"><span style="width:1">text1</span><span style="width:1">text2</span></div></div></body></html>`
+        const unHighLighted = `<html><head></head><body><div><div class="verse" id="o-0">text1text2</div></div></body></html>`
+        const dom = getDom(hlTestDoc);
+        const document = dom.window.document;
+        const range = document.createRange();
+        const range2 = document.createRange();
+        const e = document.querySelector("#o-0")
+        {
+            const node1 = e.childNodes[0];
+            range.setStart(node1, 0);
+            range.setEnd(node1, 5);
+            range2.setStart(node1, 5);
+            range2.setEnd(node1, 10);
+            expect(e.childNodes.length).toBe(1);
+
+            const {undo: undo1} = highlightRange(range, "span", {style: "width:1"});
+            expect(e.childNodes.length).toBe(2);
+            const {undo: undo2} = highlightRange(range2, "span", {style: "width:1"});
+            expect(e.childNodes.length).toBe(2);
+            expect(document.documentElement.outerHTML).toBe(highLighted);
+            undo2();
+            undo1();
+            expect(e.childNodes.length).toBe(3);
+            expect(document.documentElement.outerHTML).toBe(unHighLighted);
+        }
+    });
+});
+
 describe("textLength tests", () => {
     let dom, document;
     beforeEach(() => {
@@ -91,7 +232,7 @@ describe("textLength tests", () => {
     })
 
     it("test1", () => {
-        const e = document.querySelector("#v-0")
+        const e = document.querySelector("#o-0")
         const length = textLength(e);
         expect(length).toBe(35);
     });
@@ -105,7 +246,7 @@ describe("lastTextNode tests", () => {
     })
 
     it("test1", () => {
-        const e = document.querySelector("#v-0")
+        const e = document.querySelector("#o-0")
         const node = lastTextNode(e);
         console.log("node", node);
         expect(node.textContent).toBe("text5");
@@ -125,13 +266,13 @@ describe("findPreviousSiblingsWithClass tests", () => {
         const e = document.querySelector("#between-2").firstChild
         const {siblings, verseNode} = findPreviousSiblingWithClass(e, "verse")
         expect(siblings.length).toBe(2);
-        expect(verseNode.id).toBe("v-0");
+        expect(verseNode.id).toBe("o-0");
     });
     it("test2", () => {
         const e = document.querySelector("#between-1").firstChild
         const {siblings, verseNode} = findPreviousSiblingWithClass(e, "verse")
         expect(siblings.length).toBe(1);
-        expect(verseNode.id).toBe("v-0");
+        expect(verseNode.id).toBe("o-0");
     });
     it("test3", () => {
         const e = document.querySelector("#b-3-1").firstChild
@@ -143,7 +284,7 @@ describe("findPreviousSiblingsWithClass tests", () => {
         const e = document.querySelector("#between-3").firstChild
         const {siblings, verseNode} = findPreviousSiblingWithClass(e, "verse")
         expect(siblings.length).toBe(3);
-        expect(verseNode.id).toBe("v-0");
+        expect(verseNode.id).toBe("o-0");
     });
 });
 
@@ -159,7 +300,7 @@ describe("findParentsBeforeVerseSiblings tests", () => {
         const {parent, siblings, verseNode} = findParentsBeforeVerseSibling(e)
         expect(parent.id).toBe("between-2");
         expect(siblings.length).toBe(2);
-        expect(verseNode.id).toBe("v-0");
+        expect(verseNode.id).toBe("o-0");
     });
 
     it("test2", () => {
@@ -167,7 +308,7 @@ describe("findParentsBeforeVerseSiblings tests", () => {
         const {parent, siblings, verseNode} = findParentsBeforeVerseSibling(e)
         expect(parent.id).toBe("between-2");
         expect(siblings.length).toBe(2);
-        expect(verseNode.id).toBe("v-0");
+        expect(verseNode.id).toBe("o-0");
     });
 });
 
@@ -402,7 +543,7 @@ describe("calculateOffsetToVerse tests", () => {
         expect(offset).toBe(5)
     });
     it("test calculateOffsetToParent test 4", () => {
-        const elem1 = document.querySelector("#v-0")
+        const elem1 = document.querySelector("#o-0")
         const t = findNext(elem1, elem1, true);
 
         const offset = calculateOffsetToParent(t, elem1, t.length)
@@ -456,7 +597,7 @@ describe("findNodeAtOffset tests", () => {
     })
 
     function testOffset(testOffset, resultText, resultOffset) {
-        const elem1 = document.querySelector("#v-0")
+        const elem1 = document.querySelector("#o-0")
 
         const result = findNodeAtOffset(elem1, testOffset, resultText, resultOffset)
         const [node, offset] = result;

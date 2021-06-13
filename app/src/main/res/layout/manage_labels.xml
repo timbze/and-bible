@@ -26,58 +26,7 @@
 		android:id="@android:id/list"
 		android:layout_width="match_parent"
 		android:layout_height="0dp"
-		android:layout_above="@+id/button_panel"
-		app:layout_constraintBottom_toTopOf="@+id/button_panel"
+		app:layout_constraintBottom_toBottomOf="parent"
 		app:layout_constraintStart_toStartOf="parent"
 		app:layout_constraintTop_toBottomOf="@id/selectMultipleSwitch" />
-	<!-- Button bar with OK button -->
-	<LinearLayout
-		android:id="@+id/button_panel"
-		android:layout_width="fill_parent"
-		android:layout_height="wrap_content"
-		android:orientation="horizontal"
-		app:layout_constraintBottom_toBottomOf="parent"
-		app:layout_constraintStart_toStartOf="parent">
-		<Button
-			android:id="@+id/resetButton"
-			style="@style/Widget.AppCompat.Button.ButtonBar.AlertDialog"
-			android:layout_width="0dip"
-			android:layout_height="wrap_content"
-			android:layout_weight="1"
-			android:onClick="onReset"
-			android:text="@string/reset_generic" />
-
-		<Button
-			android:id="@+id/newLabel"
-			style="@style/Widget.AppCompat.Button.ButtonBar.AlertDialog"
-			android:layout_width="0dip"
-			android:layout_height="wrap_content"
-			android:layout_weight="1"
-			android:onClick="onNewLabel"
-			android:text="@string/new_item" />
-
-		<Space
-			android:id="@+id/spacer"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:layout_weight="1" />
-
-		<Button
-			android:id="@+id/cancel"
-			style="@style/Widget.AppCompat.Button.ButtonBar.AlertDialog"
-			android:layout_width="0dip"
-			android:layout_height="wrap_content"
-			android:layout_weight="1"
-			android:onClick="onCancel"
-			android:text="@string/cancel" />
-
-		<Button
-			android:id="@+id/okButton"
-			style="@style/Widget.AppCompat.Button.ButtonBar.AlertDialog"
-			android:layout_width="0dip"
-			android:layout_height="wrap_content"
-			android:layout_weight="1"
-			android:onClick="onOkay"
-			android:text="@string/okay" />
-	</LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

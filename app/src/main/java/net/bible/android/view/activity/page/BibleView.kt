@@ -791,7 +791,7 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
                              anchorOrdinal: Int? = null)
     {
         val currentPage = window.pageManager.currentPage
-        bookmarkLabels = bookmarkControl.allLabels
+        bookmarkLabels = bookmarkControl.assignableLabels
         initialVerse = verse
 
         initialAnchorOrdinal = anchorOrdinal
@@ -840,7 +840,7 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
     private var initialAnchorOrdinal: Int? = null
     internal var initialVerse: Verse? = null
     private val displaySettings get() = window.pageManager.actualTextDisplaySettings
-    private val workspaceSettings get() = windowControl.windowRepository.workspaceSettings
+    internal val workspaceSettings get() = windowControl.windowRepository.workspaceSettings
 
     fun updateTextDisplaySettings(onAttach: Boolean = false) {
         Log.d(TAG, "updateTextDisplaySettings")
@@ -859,10 +859,14 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
     private fun getUpdateConfigCommand(initial: Boolean): String {
         val favouriteLabels = json.encodeToString(serializer(), workspaceSettings.favouriteLabels)
         val recentLabels = json.encodeToString(serializer(), workspaceSettings.recentLabels.map { it.labelId })
+        val hideCompareDocuments = json.encodeToString(serializer(), workspaceSettings.hideCompareDocuments)
         return """
                 bibleView.emit('set_config', {
                     config: ${displaySettings.toJson()}, 
-                    appSettings: {activeWindow: $isActive, nightMode: $nightMode, errorBox: $showErrorBox, favouriteLabels: $favouriteLabels, recentLabels: $recentLabels}, 
+                    appSettings: {activeWindow: $isActive, nightMode: $nightMode, 
+                        errorBox: $showErrorBox, favouriteLabels: $favouriteLabels, 
+                        recentLabels: $recentLabels, hideCompareDocuments: $hideCompareDocuments
+                        }, 
                     initial: $initial
                     });
                 """.trimIndent()
@@ -886,6 +890,7 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
     var labelsUploaded = false
 
     private fun replaceDocument() {
+        Log.d(TAG, "replaceDocument")
         val documentStr = latestDocumentStr
         synchronized(this) {
             needsDocument = false
@@ -1057,6 +1062,7 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
     fun onEvent(event: BookmarkAddedOrUpdatedEvent) {
         val document = firstDocument
         if(document !is DocumentWithBookmarks) return
+        if(document is MyNotesDocument && !document.verseRange.overlaps(event.bookmark.kjvVerseRange)) return
 
         val clientBookmark = ClientBookmark(event.bookmark,
             when(document) {
@@ -1256,7 +1262,7 @@ class BibleView(val mainBibleActivity: MainBibleActivity,
             toVerse = toVerse.toV11n(v.versification)
             endVerse = endVerse?.toV11n(v.versification)
         }
-        val jumpToId = "v-${toVerse.ordinal}"
+        val jumpToId = "o-${toVerse.ordinal}"
         val now = !contentVisible || restoreOngoing
         val highlight = !contentVisible || endVerse != null
         fun boolString(value: Boolean?): String {

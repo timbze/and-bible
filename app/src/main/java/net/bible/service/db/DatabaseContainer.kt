@@ -886,7 +886,23 @@ private val MIGRATION_50_51_underlineStyleAndRecentLabels = object : Migration(5
     }
 }
 
-private val MIGRATION_51_52_readingPlanImport = object : Migration(47, 48) {
+private val MIGRATION_51_52_compareDocuments = object : Migration(51, 52) {
+    override fun doMigrate(db: SupportSQLiteDatabase) {
+        db.apply {
+            execSQL("ALTER TABLE `Workspace` ADD COLUMN `window_behavior_settings_hideCompareDocuments` TEXT DEFAULT NULL")
+        }
+    }
+}
+
+private val MIGRATION_52_53_underline_default = object : Migration(52, 53) {
+    override fun doMigrate(db: SupportSQLiteDatabase) {
+        // db.apply {
+        //     execSQL("UPDATE `Label` SET underlineStyleWholeVerse=1")
+        //}
+    }
+}
+
+private val MIGRATION_53_54_readingPlanImport = object : Migration(53, 54) {
     override fun doMigrate(db: SupportSQLiteDatabase) {
         db.apply {
             execSQL("ALTER TABLE readingplan RENAME TO readingplanold")
@@ -973,7 +989,9 @@ object DatabaseContainer {
                         MIGRATION_48_49_anchorOrdinal,
                         MIGRATION_49_50_wholeVerseBookmark,
                         MIGRATION_50_51_underlineStyleAndRecentLabels,
-                        MIGRATION_51_52_readingPlanImport,
+                        MIGRATION_51_52_compareDocuments,
+                        MIGRATION_52_53_underline_default,
+                        MIGRATION_53_54_readingPlanImport,
                         /** When adding new migrations, remember to increment [DATABASE_VERSION] too */
                     )
                     .build()

@@ -33,13 +33,13 @@ import {init, exec, queryCommandState} from "@/lib/pell/pell";
 import InputText from "@/components/modals/InputText";
 import {
   faBible,
-  faEdit,
   faIndent,
   faListOl,
   faListUl,
-  faOutdent, faSlash,
+  faOutdent,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons";
-import {icon, layer} from "@fortawesome/fontawesome-svg-core";
+import {icon} from "@fortawesome/fontawesome-svg-core";
 import {debounce} from "lodash";
 
 export default {
@@ -86,10 +86,8 @@ export default {
     }
 
     const close = {
-      icon: layer(push => {
-        push(icon(faEdit))
-        push(icon(faSlash, {transform: {x: -2, size: 18} }))
-      }).html,
+      icon: icon(faTimes).html,
+      class: "end",
       title: 'Close',
       result: () => {
         save();
@@ -176,6 +174,10 @@ export default {
   width: $pell-button-width *0.9;
   .night & {
     color: inherit;
+  }
+  &.end {
+    position: absolute;
+    right: 0;
   }
 }
 

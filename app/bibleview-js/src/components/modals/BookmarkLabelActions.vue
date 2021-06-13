@@ -18,18 +18,15 @@
 <template>
   <Modal blocking v-if="showModal" @close="showModal = false">
     <template #title>
-      {{ strings.setupLabels }}
+      <FontAwesomeIcon icon="tags"/> {{ strings.bookmarkLabels }}
     </template>
 
     <div class="items">
-      <div class="item title">
-        <FontAwesomeIcon icon="tags"/>
-        {{ strings.currentLabels }}
-      </div>
       <div class="item">
         <LabelList :bookmark-id="bookmarkId" only-assign in-bookmark />
+        <hr/>
       </div>
-      <div class="item title">
+      <div class="item title top">
         <FontAwesomeIcon icon="heart"/>
         {{strings.favouriteLabels}}
       </div>
@@ -91,18 +88,28 @@ export default {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 @import "~@/common.scss";
 .items {
+  @extend .visible-scrollbar;
   display: flex;
   flex-direction: column;
+  max-height: calc(var(--max-height) - 25pt);
+  overflow-y: auto;
 }
 .item {
   padding-top: 5px;
   padding-bottom: 5px;
   padding-left: 2px;
   &.title {
-    padding-top: 20px;
+    padding-top: 10px;
+    &.top {
+      padding-top: 0;
+    }
   }
+
+}
+hr {
+  border-top: 1px solid rgba(0, 0, 0, 0.2);
 }
 </style>

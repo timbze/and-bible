@@ -116,7 +116,9 @@ class SpeakTransportWidget(context: Context, attributeSet: AttributeSet): Linear
                             else -> {
                                 speakControl.speakBible()
                                 if (SpeakSettings.load().synchronize) {
-                                    context.startActivity(Intent(context, MainBibleActivity::class.java))
+                                    val intent = Intent(context, MainBibleActivity::class.java)
+                                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                    context.startActivity(intent)
                                 }
                             }
                         }
@@ -133,20 +135,21 @@ class SpeakTransportWidget(context: Context, attributeSet: AttributeSet): Linear
         val bookmarkTitles = ArrayList<String>()
         val bookmarks = ArrayList<Bookmark>()
         val label = bookmarkControl.speakLabel
-        for (b in bookmarkControl.getBookmarksWithLabel(label).sortedWith(
-                Comparator<Bookmark> { o1, o2 -> o1.verseRange.start.compareTo(o2.verseRange.start) })) {
+        for (b in bookmarkControl.getBookmarksWithLabel(label).sortedWith { o1, o2 -> o1.verseRange.start.compareTo(o2.verseRange.start) }) {
 
             bookmarkTitles.add("${b.verseRange.start.name} (${b.playbackSettings?.bookId?:"?"})")
             bookmarks.add(b)
         }
 
-        val adapter = ArrayAdapter<String>(context, android.R.layout.select_dialog_item, bookmarkTitles)
+        val adapter = ArrayAdapter(context, android.R.layout.select_dialog_item, bookmarkTitles)
         AlertDialog.Builder(context)
                 .setTitle(R.string.speak_bookmarks_menu_title)
                 .setAdapter(adapter) { _, which ->
                     speakControl.speakFromBookmark(bookmarks[which])
                     if(SpeakSettings.load().synchronize) {
-                        context.startActivity(Intent(context, MainBibleActivity::class.java))
+                        context.startActivity(Intent(context, MainBibleActivity::class.java)
+                            .apply { flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP }
+                        )
                     }
                 }
                 .setNegativeButton(R.string.cancel, null)
